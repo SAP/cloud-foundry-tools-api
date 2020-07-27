@@ -1,0 +1,17 @@
+.vscode/**
+out/tests/**
+src/**
+tests/**
+.gitignore
+**/tsconfig.json
+**/*.map
+reports/**
+**/*lint.*
+**/sonar*
+**/whitesource*
+moch*
+**/.xmake*
+**/Jenkin*
+cfg/**
+.pipeline/**
+.nyc*

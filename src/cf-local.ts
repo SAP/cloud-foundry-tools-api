@@ -1,0 +1,383 @@
+import * as fsextra from "fs-extra";
+import * as os from 'os';
+import * as path from 'path';
+import { parse, stringify } from "comment-json";
+import * as _ from "lodash";
+import { Cli } from "./cli";
+import { messages } from "./messages";
+import {
+    ProgressHandler, CliResult, CFResource, CancellationToken, CFTarget, ServiceInstanceInfo, ServiceInfo, PlanInfo,
+    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget
+} from './types';
+import { assureQuery } from "./utils";
+import { SpawnOptions } from "child_process";
+
+function getGuid(resource: any): string {
+    return _.get(resource, "metadata.guid", '');
+}
+
+function getName(resource: any): string {
+    return _.get(resource, "entity.name", '');
+}
+
+function getLabel(resource: any): string {
+    return _.get(resource, "entity.label", '');
+}
+
+function getDescription(resource: any): string {
+    return _.get(resource, "entity.description", '');
+}
+
+function getSpaceFieldGUID(spaceField: any): string {
+    return _.get(spaceField, "GUID", '');
+}
+
+function getOrgGUID(resource: any): string {
+    return _.get(resource, "entity.organization_guid", '');
+}
+
+function getTags(resource: any): string[] {
+    return _.get(resource, "entity.tags", []);
+}
+
+let cacheServiceInstanceTypes: any = {};
+export function clearCacheServiceInstances() {
+    cacheServiceInstanceTypes = {};
+}
+
+export function cfGetConfigFilePath(): string {
+    return path.join(_.get(process, "env.CF_HOME", os.homedir()), ".cf", "config.json");
+}
+
+export async function cfGetConfigFileField(field: string): Promise<any> {
+    try {
+        const configJson = parse(await fsextra.readFile(cfGetConfigFilePath(), "utf8"));
+        return _.get(configJson, `${field}`);
+    } catch (error) {
+        // empty or non existing file
+    }
+}
+
+async function padQuerySpace(query: IServiceQuery): Promise<IServiceQuery> {
+    query = assureQuery(query);
+    const filter = _.find(query.filters, ['key', eFilters.space_guid]);
+    if (!_.get(filter, 'value')) {
+        const space: string = getSpaceFieldGUID(await cfGetConfigFileField("SpaceFields"));
+        if (!space) {
+            throw new Error(messages.cf_setting_not_set);
+        }
+        query.filters = _.concat(query.filters, [{ key: eFilters.space_guid, value: space }]);
+    }
+    return query;
+}
+
+const ENTITY_STATE_INPROGRESS = "in progress";
+const ENTITY_STATE_FAILED = "failed";
+
+function composeQuery(query: IServiceQuery): string {
+    query = assureQuery(query);
+    function _queryFilters(filters: IServiceFilters[]): string[] {
+        return _.compact(_.values(_.map(filters, filter => {
+            const value = _.get(filter, 'value');
+            if (value) {
+                return `q=${filter.key}${filter.op || eOperation.eq}${value}`;
+            }
+        })));
+    }
+    function _queryParams(object: any): string[] {
+        return _.compact(_.map(_.keys(object), key => {
+            const value = _.get(object, key);
+            if (value) {
+                return `${key}=${value}`;
+            }
+        }));
+    }
+    // a semicolon (;) serves as an "AND" operator between two query predicates in the value of the "q" query parameter
+    return _.compact(_.concat(_queryFilters(query.filters).join(';'), _queryParams(_.omit(query, 'filters')))).join('&');
+}
+
+function waitForEntity(
+    resolve: (value?: CFResource | PromiseLike<CFResource> | any) => void,
+    reject: (reason?: any) => void,
+    resource: CFResource,
+    attempt: number,
+    maxNumberOfAttemps: number,
+    jobFunction: () => Promise<CFResource>,
+    progress: ProgressHandler
+) {
+    if (attempt < maxNumberOfAttemps) {
+        if (progress.cancelToken.isCancellationRequested) {
+            reject(new Error(messages.create_service_canceled_by_requester));
+        }
+        const state = _.get(resource, "entity.last_operation.state");
+        if (state === ENTITY_STATE_INPROGRESS) {
+            progress.progress.report({ "message": messages.service_creation_started, increment: Math.floor(1 / maxNumberOfAttemps * 100) });
+            setTimeout(() => {
+                jobFunction().then(retriedResource => {
+                    waitForEntity(resolve, reject, retriedResource, attempt + 1, maxNumberOfAttemps, jobFunction, progress);
+                }).catch(error => {
+                    reject(error);
+                });
+            }, 2000);
+        } else if (state === ENTITY_STATE_FAILED) {
+            reject(new Error(messages.failed_creating_entity(_.get(resource, "entity.last_operation.description"), getName(resource))));
+        } else {
+            progress.progress.report({ "message": messages.service_creation_started, increment: 100 });
+            resolve(resource);
+        }
+    } else {
+        resolve(messages.exceed_number_of_attempts(getName(resource)));
+    }
+}
+
+async function execQuery(args: { query: string[]; options?: SpawnOptions; token?: CancellationToken }, fncParse?: (arg: any) => Promise<any>): Promise<any> {
+    const cliResult: CliResult = await Cli.execute(args.query, args.options, args.token);
+    if (cliResult.exitCode !== 0) {
+        throw new Error(cliResult.error || cliResult.stderr || cliResult.stdout);
+    }
+    return fncParse ? await fncParse(parse(cliResult.stdout)) : cliResult.stdout || cliResult.stderr;
+}
+
+async function execTotal(args: { query: string; options?: SpawnOptions; token?: CancellationToken }, fncParse?: (arg: any) => Promise<any>): Promise<any[]> {
+    const collection: any = [];
+    let query = args.query;
+    while (query) {
+        const result = parse(await execQuery({ query: ["curl", query], options: args.options, token: args.token }));
+        for (const resource of _.get(result, "resources", [])) {
+            collection.push(fncParse ? await fncParse(resource) : resource);
+        }
+        query = result.next_url;
+    }
+    return _.compact(collection);
+}
+
+function getCachedServiceInstanceLabel(service: any): Promise<string> {
+    if (_.get(service, ['entity', 'service_url'])) {
+        if (!cacheServiceInstanceTypes[service.entity.service_url]) {
+            cacheServiceInstanceTypes[service.entity.service_url] = Cli.execute(["curl", service.entity.service_url]).then(response => {
+                return (response.exitCode === 0) ? getLabel(parse(response.stdout)) : 'unknown';
+            });
+        }
+        return cacheServiceInstanceTypes[service.entity.service_url];
+    } else {
+        return Promise.resolve('unknown');
+    }
+}
+
+/**
+ * Fetch service instance by name from specified space_guid
+ * @param query. Take care for encode the instance name in query parameter :  { key: eFilters.name, value: encodeURI(instanceName) }
+ * @param token 
+ */
+export async function cfGetServiceInstance(query: IServiceQuery, token?: CancellationToken): Promise<CFResource> {
+    const result = await execQuery({ query: ["curl", `/v2/service_instances?${composeQuery(query)}`], token });
+    const serviceRespose = parse(result);
+    if (serviceRespose.total_results === 1) {
+        return _.get(serviceRespose, 'resources[0]');
+    }
+    throw new Error(messages.service_not_found(_.get(_.find(query.filters, ['key', eFilters.name]), 'value')) || 'unknown');
+}
+
+export async function cfCreateService(planGuid: string, instanceName: string, params: any, tags: string[], progress?: ProgressHandler, maxNumberOfAttemps?: number
+): Promise<CFResource | undefined | string> {
+    const spaceGuid: string = getSpaceFieldGUID(await cfGetConfigFileField("SpaceFields"));
+    if (!spaceGuid) {
+        throw new Error(messages.space_not_set);
+    }
+
+    maxNumberOfAttemps = _.isNil(maxNumberOfAttemps) ? 45 : maxNumberOfAttemps;
+    progress = _.defaults(progress, { progress: { report: () => '' } }, { cancelToken: { isCancellationRequested: false, onCancellationRequested: () => '' } });
+    const request = { name: instanceName, space_guid: spaceGuid, service_plan_guid: planGuid, parameters: params, tags };
+    const result = await execQuery({ query: ["curl", "/v2/service_instances?accepts_incomplete=true", "-d", stringify(request), "-X", "POST"], token: progress.cancelToken });
+
+    progress.progress.report({ "message": messages.service_creation_started, increment: 1 });
+
+    const query = { filters: [{ key: eFilters.name, value: encodeURIComponent(instanceName) }, { key: eFilters.space_guid, value: spaceGuid }] };
+    return new Promise<CFResource | undefined | string>((resolve, reject) => {
+        waitForEntity(resolve, reject, parse(result), 0, maxNumberOfAttemps, () => cfGetServiceInstance(query, progress.cancelToken), progress);
+    });
+}
+
+export async function cfLogin(endpoint: string, user: string, pwd: string): Promise<string> {
+    let result;
+    try {
+        result = await execQuery({ query: ["login", "-a", endpoint, "-u", user, "-p", pwd, "-o", "no-org-for-now", "-s", "no-space-for-now"], options: { env: { "CF_COLOR": "false" } } });
+    } catch (e) {
+        result = _.get(e, 'message', '');
+    }
+    return result.includes(`Authenticating...${NEW_LINE}${OK}`) ? OK : result;
+}
+
+export async function cfGetAvailableOrgs(query?: IServiceQuery): Promise<any[]> {
+    const params = composeQuery(query);
+    return execTotal({ query: "/v2/organizations" + (params ? `?${params}` : "") }, (data: any) => {
+        return Promise.resolve({ label: getName(data), guid: getGuid(data) });
+    });
+}
+
+export async function cfGetAvailableSpaces(orgGuid?: string): Promise<any[]> {
+    return execTotal({ query: orgGuid ? `/v2/organizations/${orgGuid}/spaces` : "/v2/spaces" }, (resource: any) => {
+        return Promise.resolve({
+            label: getName(resource),
+            guid: getGuid(resource),
+            orgGUID: getOrgGUID(resource)
+        });
+    });
+}
+
+export async function cfGetServiceInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
+    query = await padQuerySpace(query);
+    return execTotal({ query: `v2/service_instances?${composeQuery(query)}`, token }, async (info: any): Promise<ServiceInstanceInfo> => {
+        try {
+            return { "label": getName(info), "serviceName": await getCachedServiceInstanceLabel(info), plan_guid: _.get(info, "entity.service_plan_guid"), tags: getTags(info) };
+        } catch (error) {
+            return undefined;
+        }
+    });
+}
+
+export async function cfSetOrgSpace(org: string, space?: string): Promise<void> {
+    await execQuery({ query: _.concat(["target", "-o", org], (space ? ["-s", space] : [])) });
+    clearCacheServiceInstances();
+    cfGetServiceInstances();
+}
+
+export async function cfGetTargets(): Promise<CFTarget[]> {
+    const targets = await execQuery({ query: ["targets"] });
+
+    if (_.includes(targets, "No targets have been saved yet") || _.includes(targets, "is not a registered command")) {
+        // no targets yet.
+        return [{ label: DEFAULT_TARGET, isCurrent: true, isDirty: false }];
+    }
+
+    const targetSubstrings = _.compact(_.map(targets.split(NEW_LINE), targetSubstring => targetSubstring.trim()));
+    return _.map(targetSubstrings, targetSubstring => {
+        const parentthesisPos = targetSubstring.indexOf("(current");
+        if (parentthesisPos > 0) {
+            targetSubstring = targetSubstring.substring(0, parentthesisPos);
+            return { label: targetSubstring.trim(), isCurrent: true, isDirty: targetSubstring.includes("modified") };
+        }
+
+        return { label: targetSubstring, isCurrent: false, isDirty: false };
+    });
+}
+
+/**
+ * Returning User-provided-services instances
+ * 
+ * @param query: IServiceQuery (optional)
+ * @param token : CancellationToken (optional)
+ */
+export async function cfGetUpsInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
+    query = await padQuerySpace(query);
+    return execTotal({ query: `v2/user_provided_service_instances?${composeQuery(query)}`, token }, (info: any): Promise<ServiceInstanceInfo> => {
+        return Promise.resolve({ label: getName(info), serviceName: _.get(info, "entity.type"), tags: getTags(info) });
+    });
+}
+
+export async function cfGetServices(query?: IServiceQuery, cancelationToken?: CancellationToken): Promise<ServiceInfo[]> {
+    return execTotal({ query: `/v2/services?${composeQuery(query)}`, token: cancelationToken }, (service: any) => {
+        return Promise.resolve({
+            label: getLabel(service),
+            service_plans_url: _.get(service, "entity.service_plans_url"),
+            guid: getGuid(service),
+            description: getDescription(service)
+        });
+    });
+}
+
+export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
+    return execTotal({ query: servicePlansUrl }, (data: any) => {
+        return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
+    });
+}
+
+export async function cfGetServicePlansList(query?: IServiceQuery, token?: CancellationToken): Promise<PlanInfo[]> {
+    return execTotal({ query: `/v2/service_plans?${composeQuery(query)}`, token }, (data: any) => {
+        return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
+    });
+}
+
+export async function cfBindLocalServices(filePath: string, instanceNames: string[], tags?: string[], serviceKeyNames?: string[]): Promise<void> {
+    await execQuery({
+        query: [
+            "bind-local",
+            "-path",
+            filePath,
+            "-service-names",
+            ..._.map(instanceNames, encodeURI),
+            ...(tags ? _.concat(["-tags"], tags) : []),
+            ...(serviceKeyNames ? _.concat(["-service-keys"], serviceKeyNames) : [])
+        ]
+    });
+}
+
+/**
+ * Example of usage : cf bind-local-ups -path .env -service-names serviceNamesValue1 -service-names serviceNamesvalue2 -tags tagsValue1 -tags tagsValue2
+ * 
+ * @param filePath : string
+ * @param instanceNames : string[]
+ * @param tags : string[]
+ */
+export async function cfBindLocalUps(filePath: string, instanceNames: string[], tags?: string[]): Promise<void> {
+    await execQuery({
+        query: _.concat(
+            ["bind-local-ups", "-path", filePath],
+            _.reduce(instanceNames, (result, instanceName) => {
+                result = _.concat(result, [`-service-names`, `${encodeURI(instanceName)}`]);
+                return result;
+            }, []),
+            _.reduce(tags, (result, tag) => {
+                result = _.concat(result, [`-tags`, `${tag}`]);
+                return result;
+            }, [])
+        )
+    });
+}
+
+/**
+ * List all Service Keys
+ * @param query 
+ * @param token (optional) ability to cancel operaton
+ */
+export async function cfGetServiceKeys(query?: IServiceQuery, token?: CancellationToken): Promise<any[]> {
+    if (_.isEmpty(_.intersection([eFilters.name, eFilters.service_instance_guid], _.map(_.get(query, 'filters'), 'key')))) {
+        throw new Error(messages.no_valid_filters);
+    }
+    return execTotal({ query: `v2/service_keys?${composeQuery(query)}`, token });
+}
+
+export async function cfGetInstanceCredentials(query?: IServiceQuery, token?: CancellationToken): Promise<any[]> {
+    return _.compact(_.map(await cfGetServiceKeys(query, token), 'entity.credentials'));
+}
+
+export async function cfGetInstanceMetadata(instanceName: string): Promise<any> {
+    const query: IServiceQuery = {
+        filters: [
+            { key: eFilters.name, value: encodeURIComponent(instanceName) },
+            { key: eFilters.space_guid, value: _.get(await cfGetConfigFileField("SpaceFields"), "GUID") }
+        ]
+    };
+    const serviceInstance = await cfGetServiceInstance(query);
+    const plan = await execQuery({ query: ["curl", _.get(serviceInstance, ['entity', 'service_plan_url'])] }, (data: any) => {
+        return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
+    });
+    return {
+        serviceName: _.get(serviceInstance, ['entity', 'name']),
+        plan: _.get(plan, 'label'),
+        service: await getCachedServiceInstanceLabel(serviceInstance)
+    };
+}
+
+export async function cfGetTarget(): Promise<ITarget> {
+    const data = await execQuery({ query: ["target"], options: { env: { "CF_COLOR": "false" } } });
+    const result: any = {};
+    _.each(_.compact(_.split(data, '\n')), item => {
+        item = _.replace(_.trim(item), /^['"]|['"]$/g, '');
+        const sep = _.indexOf(item, ':');
+        if (sep > -1) {
+            result[`${_.trim(_.join(_.slice(item, 0, sep), ''))}`] = _.trim(_.join(_.slice(item, sep + 1), ''));
+        }
+    });
+    return result;
+}

@@ -1,0 +1,49 @@
+{
+	"name": "@sap/cf-tools",
+	"displayName": "cf-tools",
+	"description": "Cloud Foundry tools",
+	"version": "0.4.0",
+	"author": "SAP SE",
+	"publisher": "SAP",
+	"license": "MIT",
+	"main": "./out/src/index.js",
+	"types": "out/src/index.d.ts",
+	"files": [
+		"out/src/*.js",
+		"out/src/*.ts"
+	],
+	"scripts": {
+		"compile": "tsc -p ./",
+		"lint": "eslint . --ext .ts,.tsx --cache",
+		"pretest": "npm run compile & npm run lint",
+		"test": "nyc mocha -p tsconfig.json --opts ./mocha.opts"
+	},
+	"devDependencies": {
+		"@types/fs-extra": "^5.0.5",
+		"@types/lodash": "^4.14.123",
+		"@types/comment-json": "1.1.1",
+		"@types/chai": "^4.1.7",
+		"@types/sinon": "^7.0.13",
+		"@types/mocha": "^2.2.42",
+		"@types/node": "^10.12.21",
+		"@types/properties-reader": "0.0.1",
+		"@typescript-eslint/parser": "^2.30.0",
+		"@typescript-eslint/eslint-plugin": "^2.30.0",
+		"eslint": "^6.8.0",
+		"eslint-config-prettier": "^6.11.0",
+		"prettier": "^2.0.5",
+		"chai": "^4.2.0",
+		"sinon": "^7.3.2",
+		"mocha": "^6.2.0",
+		"nyc": "^14.1.1",
+		"ts-node": "^8.3.0",
+		"typescript": "^3.9.7"
+	},
+	"dependencies": {
+		"comment-json": "2.1.0",
+		"fs-extra": "7.0.1",
+		"lodash": "4.17.16",
+		"properties-reader": "0.3.1",
+		"url": "0.11.0"
+	}
+}
