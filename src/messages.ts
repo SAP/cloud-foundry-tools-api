@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company <alexander.gilin@sap.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 export const messages = {
   space_not_set: "Space not set",
   service_creation_started: "Service creation started, waiting for 'Ready' state.",

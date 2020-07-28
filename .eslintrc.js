@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2020 AG <ag@sap.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /** @type {import("eslint").Linter.Config} */
 module.exports = {
     root: true,

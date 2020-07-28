@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company <alexander.gilin@sap.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { expect, assert } from "chai";
 import * as _ from "lodash";
 import * as sinon from "sinon";

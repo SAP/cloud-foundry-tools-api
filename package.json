@@ -1,3 +1,4 @@
+
 {
 	"name": "@sap/cf-tools",
 	"displayName": "cf-tools",
@@ -5,7 +6,10 @@
 	"version": "0.4.0",
 	"author": "SAP SE",
 	"publisher": "SAP",
-	"license": "MIT",
+	"license": "Apache-2.0",
+	"repository": {
+		"url": "https://github.com/sap/cloud-foundry-tools-api.git"
+	},
 	"main": "./out/src/index.js",
 	"types": "out/src/index.d.ts",
 	"files": [
