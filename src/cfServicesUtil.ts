@@ -10,8 +10,7 @@ import { ServiceInstanceInfo, ServiceKey } from "./types";
 import { cfGetServiceInstances, cfGetInstanceMetadata, cfGetTarget } from "./cf-local";
 
 export async function getServicesInstancesFilteredByType(serviceTypes: string[]): Promise<ServiceInstanceInfo[]> {
-    const serviceInstances = await cfGetServiceInstances();
-    return serviceInstances.filter(service => serviceTypes.includes(service.serviceName));
+    return _.filter(await cfGetServiceInstances(), (service => { return _.includes(serviceTypes, service.serviceName); }));
 }
 
 export async function getInstanceCredentials(instanceName: string): Promise<ServiceKey> {
@@ -37,5 +36,5 @@ export async function getInstanceMetadata(instanceName: string): Promise<any> {
 
 export async function isTargetSet(): Promise<boolean> {
     const target = await cfGetTarget();
-    return !_.isNil(target.org) && !_.isNil(target.space);
+    return !_.isEmpty(target.org) && !_.isEmpty(target.space);
 }

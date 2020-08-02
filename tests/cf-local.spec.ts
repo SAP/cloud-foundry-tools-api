@@ -43,6 +43,7 @@ describe("cf-local unit tests", () => {
     afterEach(() => {
         cliMock.verify();
         fsExtraMock.verify();
+        cfLocal.clearCacheServiceInstances();
     });
 
     describe("cfLogin", () => {
@@ -51,7 +52,7 @@ describe("cf-local unit tests", () => {
         const cliResult: CliResult = {
             stdout: "",
             stderr: "",
-            exitCode: 0
+            exitCode: 1
         };
 
         it("stdout is not empty, authentication is OK", async () => {
@@ -411,7 +412,7 @@ describe("cf-local unit tests", () => {
                     }
                 }, {
                     "entity": {
-                        "service_url": "test_service_url_2",
+                        "service_url": "test_service_url_1",
                         "name": "test_service_name2",
                         "label": "test_service_label2",
                         "tags": []
@@ -429,26 +430,26 @@ describe("cf-local unit tests", () => {
             }}`);
             const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_1"]).resolves({ exitCode: 0, stdout: `{"entity": {"label": "test_service_label1"}}` });
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_2"]).resolves({ exitCode: 0, stdout: `{"entity": {"label": "test_service_label2"}}` });
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_3"]).rejects(new Error("some error"));
+            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_1"], undefined, undefined).resolves({ exitCode: 0, stdout: `{"entity": {"label": "test_service_label1"}}` });
+            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_3"], undefined, undefined).rejects(new Error("some error"));
             const result = await cfLocal.cfGetServiceInstances({
                 filters: [
                     { key: eFilters.space_guid, value: '' }, { key: eFilters.service_plan_guid, value: '' }
                 ],
                 'results-per-page': CF_PAGE_SIZE
             });
-            expect(result).to.have.lengthOf(2);
+            expect(result).to.have.lengthOf(3);
             expect(result[0].serviceName).to.be.equal("test_service_label1");
             expect(result[0].label).to.be.equal("test_service_name1");
             assert.deepEqual(result[0].tags, tags);
-            expect(result[1].serviceName).to.be.equal("test_service_label2");
+            expect(result[1].serviceName).to.be.equal("test_service_label1");
             expect(result[1].label).to.be.equal("test_service_name2");
             assert.deepEqual(result[1].tags, []);
+            expect(result[2].serviceName).to.be.equal("unknown");
+            expect(result[2].label).to.be.equal("test_service_name3");
         });
 
         it("exitCode once is 1, cliResult.stdout is defined", async () => {
-            cfLocal.clearCacheServiceInstances();
             cliResult.exitCode = 0;
             cliResult.error = "";
             cliResult.stdout = `{
@@ -483,19 +484,23 @@ describe("cf-local unit tests", () => {
             }}`);
             const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_1"]).resolves({ stdout: `{"entity": {"label": "testLabel1"}}`, exitCode: 0 });
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_2"]).resolves({ stdout: `{"entity": {"label": "testLabel2"}}`, exitCode: 1 });
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_3"]).resolves({ stdout: `{"entity": {"label"}}`, exitCode: 0 });
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_4"]).rejects(new Error("some error"));
+            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_1"], undefined, undefined).resolves({ stdout: `{"entity": {"label": "testLabel1"}}`, exitCode: 0 });
+            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_2"], undefined, undefined).resolves({ stdout: `{"entity": {"label": "testLabel2"}}`, exitCode: 1 });
+            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_3"], undefined, undefined).resolves({ stdout: `{"entity": {"label"}}`, exitCode: 0 });
+            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_4"], undefined, undefined).rejects(new Error("some error"));
             const result = await cfLocal.cfGetServiceInstances();
-            expect(result).to.have.lengthOf(2);
+            expect(result).to.have.lengthOf(4);
             expect(result[0].serviceName).to.be.equal("testLabel1");
             expect(result[0].label).to.be.equal("test_service_name1");
             expect(result[1].serviceName).to.be.equal("unknown");
             expect(result[1].label).to.be.equal("test_service_name2");
+            expect(result[2].serviceName).to.be.equal("unknown");
+            expect(result[2].label).to.be.equal("test_service_name3");
+            expect(result[3].serviceName).to.be.equal("unknown");
+            expect(result[3].label).to.be.equal("test_service_name4");
         });
 
-        it("exitCode once is 1, cliResult.stdout is partially defined", async () => {
+        it("cliResult.stdout is partially defined", async () => {
             cliResult.exitCode = 0;
             cliResult.error = "";
             cliResult.stdout = `{
@@ -512,32 +517,31 @@ describe("cf-local unit tests", () => {
                     }
                 }, {
                     "entity": {
-                        "service_url": "test_service_url_3",
+                        "service_url": "test_service_url_1",
                         "name": "test_service_name3",
                         "label": "test_service_label3"
                     }
                 }, {
                     "entity": {
-                        "service_url": "test_service_url_4",
+                        "service_url": "test_service_url_1",
                         "name": "test_service_name4",
                         "label": "test_service_label4"
                     }
                 }]
             }`;
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": {
-                "GUID": "testSpaceGUID"
-            }}`);
             const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_1"]).never();
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_3"]).never();
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_4"]).never();
-            const result = await cfLocal.cfGetServiceInstances();
-            expect(result).to.have.lengthOf(2);
+            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_1"], undefined, undefined).resolves({ stdout: `{"entity": {"label": "testLabel1"}}`, exitCode: 0 });
+            const result = await cfLocal.cfGetServiceInstances({ filters: [{ key: eFilters.space_guid, value: "testSpaceGUID" }] });
+            expect(result).to.have.lengthOf(4);
             expect(result[0].serviceName).to.be.equal("testLabel1");
             expect(result[0].label).to.be.equal("test_service_name1");
             expect(result[1].serviceName).to.be.equal("unknown");
             expect(result[1].label).to.be.equal("test_service_name2");
+            expect(result[2].serviceName).to.be.equal("testLabel1");
+            expect(result[2].label).to.be.equal("test_service_name3");
+            expect(result[3].serviceName).to.be.equal("testLabel1");
+            expect(result[3].label).to.be.equal("test_service_name4");
         });
     });
 
@@ -725,6 +729,35 @@ describe("cf-local unit tests", () => {
             }
         });
 
+        it("exitCode is 0 but retryFunction returns incorrect result", async () => {
+            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": {
+                "GUID": "testSpaceGUID"
+            }}`);
+
+            cliResult.stdout = `{"metadata": {}, "entity": {"last_operation": {"state": "in progress"}}}`;
+            cliResult.error = "";
+            cliResult.exitCode = 0;
+            const cliRetry: CliResult = {
+                stderr: "",
+                stdout: `{ "resources": "[ {}, {} ]"}`,
+                exitCode: 0
+            };
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            let progressReported = false;
+            const progressHandler: ProgressHandler = {
+                progress: { report: () => { progressReported = true; } },
+                cancelToken: token
+            };
+            cliMock.expects("execute").withExactArgs(["curl", `/v2/service_instances?q=name:testInstanceName;q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`], undefined, progressHander.cancelToken).resolves(cliRetry);
+            cliMock.expects("execute").withExactArgs(["curl", "/v2/service_instances?accepts_incomplete=true", "-d", JSON.stringify(request), "-X", "POST"], undefined, progressHander.cancelToken).resolves(cliResult);
+            try {
+                await cfLocal.cfCreateService("testPlanGuid", "testInstanceName", {}, [], progressHandler);
+                fail("test should fail");
+            } catch (e) {
+                expect(e.message).to.be.equal(messages.service_not_found("testInstanceName"));
+            }
+        });
+
         it("exitCode is 0, cancellation requested", async () => {
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": {
                 "GUID": "testSpaceGUID"
@@ -901,57 +934,6 @@ describe("cf-local unit tests", () => {
         });
     });
 
-    describe("getServiceInstance", () => {
-        const instanceName = "testInstanceName";
-        const spaceGuid = "testSpaceGuid";
-        const cliResult: CliResult = {
-            stdout: "",
-            stderr: "",
-            exitCode: 1,
-            error: "testError"
-        };
-        const query = { filters: [{ key: eFilters.name, value: instanceName }, { key: eFilters.space_guid, value: spaceGuid }], 'direction': '' };
-        const args = ["curl", `/v2/service_instances?q=name:${instanceName};q=space_guid:${spaceGuid}&results-per-page=${CF_PAGE_SIZE}`];
-
-        it("exitCode is 1", async () => {
-            cliMock.expects("execute").withExactArgs(args, undefined, undefined).resolves(cliResult);
-            try {
-                await cfLocal.cfGetServiceInstance(query);
-                fail("test should fail");
-            } catch (error) {
-                expect(error.message).to.be.equal(cliResult.error);
-            }
-        });
-
-        it("exitCode is 0, total_results is 1", async () => {
-            cliResult.exitCode = 0;
-            cliResult.error = "";
-            cliResult.stdout = `{"total_results": 1, "resources": [{"metadata": {}, "entity": {}}]}`;
-
-            cliMock.expects("execute").withExactArgs(args, undefined, undefined).resolves(cliResult);
-
-            const result = await cfLocal.cfGetServiceInstance(query);
-            expect(result.entity).to.be.not.undefined;
-            expect(result.metadata).to.be.not.undefined;
-        });
-
-        it("exitCode is 0, total_results is not 1", async () => {
-            cliResult.exitCode = 0;
-            cliResult.error = "";
-            cliResult.stdout = `{"total_results": 2, "resources": [{}, {}]}`;
-
-            cliMock.expects("execute").withExactArgs(args, undefined, undefined).resolves(cliResult);
-
-            try {
-                await cfLocal.cfGetServiceInstance(query);
-                fail("test should fail");
-            } catch (error) {
-                expect(error.message).to.be.equal(messages.service_not_found(instanceName));
-            }
-        });
-
-    });
-
     describe("getServicePlansList", () => {
         const cliResult: CliResult = {
             stdout: "",
@@ -1066,7 +1048,9 @@ describe("cf-local unit tests", () => {
                             "creds-key-13": "creds-val-13"
                         },
                         "service_instance_url": "/v2/service_instances/888f0f72-3603-4f66-97f3-4b66b559f908",
+                        "service_url": "/v2/services/888f0f72-3603-4f66-97f3-4b66b559f908",
                         "service_plan_url": "/v2/service_plan/888f0f72-3603-4f66-97f3-4b66b559f908",
+                        "service_plan_guid": "1111f0f72-3603-4f66-97f3-4b66b559f908",
                         "service_key_parameters_url": "/v2/service_keys/67755c27-28ed-4087-9688-c07d92f3bcc9/parameters"
                     }
                 }
@@ -1146,27 +1130,46 @@ describe("cf-local unit tests", () => {
                 error: ""
             };
             cliPlanResult.stdout = `{
+                "resources": [{
                 "entity": {
                     "service_plans_url": "service_plans_url_1",
                     "name": "label_1",
-                    "description": "description_1"
+                        "description": "description_1",
+                        "service_plan_guid": "1234-5678-9876",
+                        "service_guid": "5555-6666-9999"
                 },
                 "metadata": {
                     "guid": 1
                 }
+                }]
             }`;
+
+            const cliServiceResult: CliResult = {
+                stdout: `{
+                    "entity": {
+                        "label": "myService"
+                    },
+                    "metadata": {
+                    }
+                }`,
+                stderr: "",
+                exitCode: 0,
+                error: ""
+            };
 
             cliResult.exitCode = 0;
             cliResult.stdout = JSON.stringify(result);
             const value = 'al gi';
             fsExtraMock.expects("readFile").withExactArgs(cfLocal.cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields": { "GUID": "e4b60b76-2e56-42a8-b8b6-2ff5fb041266"}}`);
             cliMock.expects("execute").withExactArgs(["curl", `/v2/service_instances?q=name:al%20gi;q=space_guid:e4b60b76-2e56-42a8-b8b6-2ff5fb041266&results-per-page=297`], undefined, undefined).resolves(cliResult);
-            cliMock.expects("execute").withExactArgs(["curl", `/v2/service_plan/888f0f72-3603-4f66-97f3-4b66b559f908`], undefined, undefined).resolves(cliPlanResult);
+            cliMock.expects("execute").withExactArgs(["curl", `/v2/service_plans?q=service_instance_guid:67755c27-28ed-4087-9688-c07d92f3bcc9&results-per-page=297`], undefined, undefined).resolves(cliPlanResult);
+            cliMock.expects("execute").withArgs(["curl", "/v2/services/888f0f72-3603-4f66-97f3-4b66b559f908"]).resolves(cliServiceResult);
             const metadata = await cfLocal.cfGetInstanceMetadata(value);
             assert.deepEqual(metadata, {
-                serviceName: 'name-166',
+                serviceName: result.resources[0].entity.name,
                 plan: 'label_1',
-                service: 'unknown'
+                service: 'myService',
+                plan_guid: result.resources[0].entity.service_plan_guid
             });
         });
     });

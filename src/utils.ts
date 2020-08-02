@@ -24,7 +24,7 @@ export async function dataContentAsObject(filePath: string) {
     }
 }
 
-export function assureQuery(query: IServiceQuery): IServiceQuery {
+export function ensureQuery(query: IServiceQuery): IServiceQuery {
     query = query || {};
     _.defaults(query, { filters: [] });
     // default paging size is 50...

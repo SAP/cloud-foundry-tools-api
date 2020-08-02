@@ -91,6 +91,7 @@ export interface ServiceTypeInfo {
     ups?: {             // user-provided-services section
         tag: string;   // uses to filter the display of user-provided-services by tag. can be sigle name or regex expression ('/[hana|monodb]/')
     }; 
+    allowCreate?: boolean; // allow creation a new service instance during binding
 }
 
 export enum eFilters {
@@ -101,6 +102,7 @@ export enum eFilters {
     gateway_name = 'gateway_name',
     organization_guid = 'organization_guid',
     service_key_guid = 'service_key_guid',
+    service_guid = 'service_guid',
     service_instance_guid = 'service_instance_guid',
     user_guid = 'user_guid',
     manager_guid = 'manager_guid',

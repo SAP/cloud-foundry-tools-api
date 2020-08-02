@@ -1,9 +1,8 @@
-
 {
 	"name": "@sap/cf-tools",
 	"displayName": "cf-tools",
 	"description": "Cloud Foundry tools",
-	"version": "0.4.0",
+	"version": "0.4.3",
 	"author": "SAP SE",
 	"publisher": "SAP",
 	"license": "Apache-2.0",
