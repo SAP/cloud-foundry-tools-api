@@ -5,7 +5,7 @@ defaults: &defaults
   docker:
     - image: circleci/node:10.17.0
 
-jobs: # a collection of steps
+jobs: # a collection of steps 
   build-and-test:
     <<: *defaults  
     steps:
