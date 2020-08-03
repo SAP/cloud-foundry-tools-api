@@ -1,0 +1,56 @@
+version: 2.1
+orbs:
+  node: circleci/node@3.0.0
+
+defaults: &defaults
+  working_directory: ~/repo
+  docker:
+    - image: circleci/node:10.17.0
+
+jobs: # a collection of steps
+  build-and-test:
+    <<: *defaults  
+    steps:
+      - checkout
+      - restore_cache:
+          key: dependency-cache-{{ checksum "./package.json" }}
+      - run:
+          name: install
+          working_directory: .
+          command: npm install
+      - run:
+          name: lint
+          working_directory: .
+          command: npm run lint
+      - run:
+          name: test
+          working_directory: .
+          command: npm run test
+      - store_artifacts: # special step to save test results as as artifact
+          # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/ 
+          path: ./reports/coverage/lcov-report
+          destination: coverage
+      - run:
+          name: package
+          working_directory: .
+          command: npm pack
+      - save_cache:
+          paths:
+            - ./node_modules
+          key: dependency-cache-{{ checksum "./package.json" }}
+ 
+workflows:
+  tests-deploy:
+    jobs:
+      - build-and-test:
+          filters:
+            tags:
+              only: /.*/
+      - deploy:
+        requires:
+          - build-and-test
+        filters:
+          tags:
+            only: /^v[0-9]+(\.[0-9]+)*/
+          branches:
+            ignore: /.*/
