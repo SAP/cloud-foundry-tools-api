@@ -14,15 +14,12 @@ jobs: # a collection of steps
           key: dependency-cache-{{ checksum "./package.json" }}
       - run:
           name: install
-          working_directory: .
           command: npm install
       - run:
           name: lint
-          working_directory: .
           command: npm run lint
       - run:
           name: test
-          working_directory: .
           command: npm run test
       - store_artifacts: # special step to save test results as as artifact
           # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/ 
@@ -30,7 +27,6 @@ jobs: # a collection of steps
           destination: coverage
       - run:
           name: package
-          working_directory: .
           command: npm pack
       - save_cache:
           paths:
