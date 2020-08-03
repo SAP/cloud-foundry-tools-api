@@ -9,6 +9,9 @@
 	"repository": {
 		"url": "https://github.com/sap/cloud-foundry-tools-api.git"
 	},
+	"bugs": {
+		"url": "https://github.com/sap-staging/cloud-foundry-tools-api.git/issues"
+	},
 	"main": "./out/src/index.js",
 	"types": "out/src/index.d.ts",
 	"files": [
@@ -19,7 +22,7 @@
 		"compile": "tsc -p ./",
 		"lint": "eslint . --ext .ts,.tsx --cache",
 		"pretest": "npm run compile & npm run lint",
-		"test": "nyc mocha -p tsconfig.json --opts ./mocha.opts"
+		"test": "nyc mocha -p tsconfig.json --config ./.mocharc.yaml"
 	},
 	"devDependencies": {
 		"@types/fs-extra": "^5.0.5",
