@@ -39,6 +39,15 @@ jobs: # a collection of steps
             - ./node_modules
           key: dependency-cache-{{ checksum "./package.json" }}
  
+   deploy:
+    docker:
+      - image: circleci/golang:1.13
+    steps:
+      - run:
+          name: "Publish Release on GitHub"
+          command: |
+            echo 'deploy'
+    
 workflows:
   tests-deploy:
     jobs:
@@ -46,3 +55,11 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - deploy:
+          requires:
+            - build-and-test
+          filters:
+            tags:
+              only: /^v[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
