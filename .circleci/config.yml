@@ -1,4 +1,4 @@
-version: 2.1
+version: 2.1 # use CircleCI 2.1
 
 defaults: &defaults
   working_directory: ~/repo
@@ -11,7 +11,7 @@ jobs: # a collection of steps
     steps:
       - checkout
       - restore_cache:
-          key: dependency-cache-{{ checksum "./package.json" }}
+          key: dependency-cache-{{ checksum "package.json" }}
       - run:
           name: install
           command: npm install
@@ -22,28 +22,32 @@ jobs: # a collection of steps
           name: test
           command: npm run test
       - store_artifacts: # special step to save test results as as artifact
-          # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/ 
-          path: ./reports/coverage/lcov-report
+          path: coverage
           destination: coverage
-      - run:
-          name: package
-          command: npm pack
+      - store_artifacts: # special step to save test results as as artifact
+          # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/ 
+          path: reports/coverage/lcov-report
+          destination: coverage
       - save_cache:
           paths:
-            - ./node_modules
-          key: dependency-cache-{{ checksum "./package.json" }}
+            - node_modules
+          key: dependency-cache-{{ checksum "frontend/package.json" }}
+  
   deploy:
     docker:
       - image: circleci/golang:1.13
     steps:
+      - attach_workspace:
+          at: ./dist
       - run:
           name: "Publish Release on GitHub"
           command: |
-            echo 'deploy'
-    
+            go get github.com/tcnksm/ghr
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${CIRCLE_TAG} ./dist/ 
+
 workflows:
   version: 2
-  tests-deploy:
+  test-deploy:
     jobs:
       - build-and-test:
           filters:
