@@ -1,6 +1,4 @@
 version: 2.1
-orbs:
-  node: circleci/node@3.0.0
 
 defaults: &defaults
   working_directory: ~/repo
@@ -38,8 +36,7 @@ jobs: # a collection of steps
           paths:
             - ./node_modules
           key: dependency-cache-{{ checksum "./package.json" }}
- 
-   deploy:
+  deploy:
     docker:
       - image: circleci/golang:1.13
     steps:
@@ -49,6 +46,7 @@ jobs: # a collection of steps
             echo 'deploy'
     
 workflows:
+  version: 2
   tests-deploy:
     jobs:
       - build-and-test:
