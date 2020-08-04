@@ -54,14 +54,14 @@ describe("Util unit tests", () => {
             fsextraMock.expects("readFile").withExactArgs(".env", "utf8").
                 resolves(`name = test       ${os.EOL}             port = 8080${os.EOL}                    company = SAP     ${os.EOL}               `);
             const resObj = await dataContentAsObject(".env");
-            expect(resObj).to.be.deep.equal({ name: "test", port: "8080", company: "SAP" });
+            expect(resObj).to.be.deep.equal({name: "test", port: "8080", company: "SAP"});
         });
 
         it("fsextra.readFile returns file with dropped line .env content", async () => {
             fsextraMock.expects("readFile").withExactArgs(".env", "utf8").
                 resolves(`name = test       ${os.EOL}             port = 8080${os.EOL}       organization: DevX${os.EOL}             company = SAP     ${os.EOL}               `);
             const resObj = await dataContentAsObject(".env");
-            expect(resObj).to.be.deep.equal({ name: "test", port: "8080", company: "SAP" });
+            expect(resObj).to.be.deep.equal({name: "test", port: "8080", company: "SAP"});
         });
     });
 });
