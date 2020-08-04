@@ -16,9 +16,6 @@ jobs: # a collection of steps
           name: install
           command: npm install
       - run:
-          name: lint
-          command: npm run lint
-      - run:
           name: test
           command: npm run test
       - store_artifacts: # special step to save test results as as artifact
@@ -26,12 +23,22 @@ jobs: # a collection of steps
           destination: coverage
       - store_artifacts: # special step to save test results as as artifact
           # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/ 
-          path: reports/coverage/lcov-report
+          path: ./reports/coverage/lcov.info
           destination: coverage
+      - run:
+          name: package
+          command: npm pack
       - save_cache:
           paths:
             - node_modules
-          key: dependency-cache-{{ checksum "frontend/package.json" }}
+          key: dependency-cache-{{ checksum "package.json" }}
+      - persist_to_workspace:
+          root: .
+          paths: 
+           # https://golang.org/pkg/path/filepath/#Match
+            - sap-cf-tools-*
+      - store_test_results: # for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+          path: test-results.xml
   
   deploy:
     docker:
