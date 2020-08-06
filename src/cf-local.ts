@@ -166,7 +166,7 @@ async function getCachedServiceInstanceLabel(service: any): Promise<string> {
             if (!cacheServiceInstanceTypes[service.entity.service_url]) {
                 cacheServiceInstanceTypes[service.entity.service_url] = await execQuery({ query: ["curl", service.entity.service_url] }, (data) => {
                     return Promise.resolve(getLabel(data));
-                });
+                }, true);
             }
             return cacheServiceInstanceTypes[service.entity.service_url];
         }

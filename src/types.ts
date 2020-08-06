@@ -89,7 +89,8 @@ export interface ServiceTypeInfo {
     plans?: PlanInfo[];
     serviceKeyName?: string;
     ups?: {             // user-provided-services section
-        tag: string;   // uses to filter the display of user-provided-services by tag. can be sigle name or regex expression ('/[hana|monodb]/')
+        tag?: string;   // uses to filter the display of user-provided-services by tag. can be sigle name or regex expression ('/[hana|monodb]/')
+        isShow?: boolean; // force to fetch ups instances
     }; 
     allowCreate?: boolean; // allow creation a new service instance during binding
 }
