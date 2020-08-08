@@ -373,7 +373,14 @@ export async function cfGetInstanceMetadata(instanceName: string): Promise<any> 
     };
 }
 
-export async function cfGetTarget(): Promise<ITarget> {
+export async function cfGetAuthToken(): Promise<string> {
+    return await execQuery({ query: ["oauth-token"] });
+}
+
+export async function cfGetTarget(weak?: boolean): Promise<ITarget> {
+    if (!weak) {
+        await cfGetAuthToken();
+    }
     const data = await execQuery({ query: ["target"], options: { env: { "CF_COLOR": "false" } } });
     const result: any = {};
     _.each(_.compact(_.split(data, '\n')), item => {
@@ -384,4 +391,8 @@ export async function cfGetTarget(): Promise<ITarget> {
         }
     });
     return result;
+}
+
+export async function cfLogout() {
+    await execQuery({ query: ["logout"] });
 }

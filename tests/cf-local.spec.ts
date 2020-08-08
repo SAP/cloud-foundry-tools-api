@@ -1198,7 +1198,7 @@ describe("cf-local unit tests", () => {
             "org:            ${org}"
             ${noSpace}`;
             cliMock.expects("execute").withExactArgs(testArgs, testOptions, undefined).resolves(cliResult);
-            const result = await cfLocal.cfGetTarget();
+            const result = await cfLocal.cfGetTarget(true);
             expect(result["api endpoint"]).to.be.equal(endpoint);
             expect(result["api version"]).to.be.equal(apiVer);
             expect(result.user).to.be.equal(user);
@@ -1212,7 +1212,7 @@ describe("cf-local unit tests", () => {
             "user:           ${user}"
             ${noOrgNoSpace}`;
             cliMock.expects("execute").withExactArgs(testArgs, testOptions, undefined).resolves(cliResult);
-            const result = await cfLocal.cfGetTarget();
+            const result = await cfLocal.cfGetTarget(true);
             expect(result["api endpoint"]).to.be.equal(endpoint);
             expect(result["api version"]).to.be.equal(apiVer);
             expect(result.user).to.be.equal(user);
@@ -1228,7 +1228,7 @@ describe("cf-local unit tests", () => {
             "space:            ${space}"
             `;
             cliMock.expects("execute").withExactArgs(testArgs, testOptions, undefined).resolves(cliResult);
-            const result = await cfLocal.cfGetTarget();
+            const result = await cfLocal.cfGetTarget(true);
             expect(result["api endpoint"]).to.be.equal(endpoint);
             expect(result["api version"]).to.be.equal(apiVer);
             expect(result.user).to.be.equal(user);
@@ -1244,7 +1244,7 @@ describe("cf-local unit tests", () => {
             cliResult.exitCode = 1;
             cliMock.expects("execute").withExactArgs(testArgs, testOptions, undefined).resolves(cliResult);
             try {
-                await cfLocal.cfGetTarget();
+                await cfLocal.cfGetTarget(true);
                 fail("test should fail");
             } catch (e) {
                 expect(_.get(e, 'message')).to.be.equal(cliResult.stderr);
@@ -1258,10 +1258,23 @@ describe("cf-local unit tests", () => {
             cliResult.exitCode = 1;
             cliMock.expects("execute").withExactArgs(testArgs, testOptions, undefined).resolves(cliResult);
             try {
-                await cfLocal.cfGetTarget();
+                await cfLocal.cfGetTarget(true);
                 fail("test should fail");
             } catch (e) {
                 expect(_.get(e, 'message')).to.be.equal(cliResult.stdout);
+            }
+        });
+
+        it("target - no space targeted - auth-token expired", async () => {
+            cliResult.stdout = ``;
+            cliResult.stderr = `authentication error`;
+            cliResult.exitCode = 1;
+            cliMock.expects("execute").withExactArgs(["oauth-token"], undefined, undefined).resolves(cliResult);
+            try {
+                await cfLocal.cfGetTarget();
+                fail("test should fail");
+            } catch(e) {
+                expect(e.message).to.be.equal(cliResult.stderr);
             }
         });
     });
@@ -1328,6 +1341,23 @@ describe("cf-local unit tests", () => {
                 "bind-local-ups", "-path", filePath, "-service-names", encodeURI(instanceNames[0]), "-service-names", encodeURI(instanceNames[1]), '-tags', tags[0], '-tags', tags[1]
             ], undefined, undefined).resolves(cliResult);
             await cfLocal.cfBindLocalUps(filePath, instanceNames, tags);
+        });
+    });
+
+    describe("cfLogout", () => {
+        const cliResult: CliResult = {
+            stdout: "",
+            stderr: "",
+            exitCode: 0,
+            error: ""
+        };
+       
+        it("logout", async () => {
+            cliResult.stdout = ``;
+            cliResult.stderr = ``;
+            cliResult.exitCode = 0;
+            cliMock.expects("execute").withExactArgs(["logout"], undefined, undefined).resolves(cliResult);
+            await cfLocal.cfLogout();
         });
     });
 });
