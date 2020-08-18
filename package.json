@@ -48,7 +48,7 @@
 	"dependencies": {
 		"comment-json": "2.1.0",
 		"fs-extra": "7.0.1",
-		"lodash": "4.17.19",
+		"lodash": "4.17.16",
 		"properties-reader": "0.3.1",
 		"url": "0.11.0"
 	}
