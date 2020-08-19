@@ -304,7 +304,16 @@ export async function cfGetServicePlansList(query?: IServiceQuery, token?: Cance
     });
 }
 
-export async function cfBindLocalServices(filePath: string, instanceNames: string[], tags?: string[], serviceKeyNames?: string[]): Promise<void> {
+/**
+ * * Example of usage : cf bind-local -path .env -service-names serviceName1 serviceName2 -service-keys serviceKeys1 serviceKeys2 -tags tagsValue1 tagsValue2 -params {\"permissions\":[\"development\"]}
+ * 
+ * @param filePath : string
+ * @param instanceNames : string[]
+ * @param tags : string[] (Optional)
+ * @param serviceKeyNames : string[] (Optional)
+ * @param serviceKeyParams : any[] (Optional) Example: {"pemissions":["development"]}
+ */
+export async function cfBindLocalServices(filePath: string, instanceNames: string[], tags?: string[], serviceKeyNames?: string[], serviceKeyParams?: unknown[]): Promise<void> {
     await execQuery({
         query: [
             "bind-local",
@@ -312,8 +321,9 @@ export async function cfBindLocalServices(filePath: string, instanceNames: strin
             filePath,
             "-service-names",
             ..._.map(instanceNames, encodeURI),
-            ...(tags ? _.concat(["-tags"], tags) : []),
-            ...(serviceKeyNames ? _.concat(["-service-keys"], serviceKeyNames) : [])
+            ...(_.size(tags) ? _.concat(["-tags"], tags) : []),
+            ...(_.size(serviceKeyNames) ? _.concat(["-service-keys"], serviceKeyNames) : []),
+            ...(_.size(serviceKeyParams) ? _.concat(["-params"], _.map(serviceKeyParams, param => { return stringify(param); })) : [])
         ]
     });
 }

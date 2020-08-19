@@ -88,6 +88,7 @@ export interface ServiceTypeInfo {
     prompt: string; // displaying prompt title on select service instances quick pick
     plans?: PlanInfo[]; // internal 
     serviceKeyName?: string;    // service key attribute name that will glued for service instance in .env (not relevant for ups)
+    serviceKeyParam?: any;  // arbitrary params in json format to be glued to service-key during 'bind-local'
     ups?: {                 // user-provided-services section
         tag?: string;       // uses to filter the display of user-provided-services by tag. can be sigle name or regex expression ('/[hana|monodb]/')
         isShow?: boolean;   // force to fetch ups instances

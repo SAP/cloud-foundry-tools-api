@@ -13,6 +13,7 @@ import * as cli from "../src/cli";
 import { messages } from "../src/messages";
 import { fail } from "assert";
 import { CliResult, DEFAULT_TARGET, ProgressHandler, CF_PAGE_SIZE, PlanInfo, eFilters } from "../src/types";
+import { stringify } from "comment-json";
 
 describe("cf-local unit tests", () => {
     let sandbox: any;
@@ -114,6 +115,17 @@ describe("cf-local unit tests", () => {
                 expect(error.message).to.be.equal(cliResult.stdout);
             }
         });
+
+        it("tags are not provided, params are provided, exit code is 0", async () => {
+            cliResult.error = '';
+            cliResult.stdout = "";
+            cliResult.exitCode = 0;
+            const params = [{ "permissions": ["development"] }, { "metadata": { "data": "value" } }];
+            const expectedParams = [stringify(params[0]), stringify(params[1])];
+            cliMock.expects("execute").withExactArgs(["bind-local", "-path", filePath, "-service-names", ...instanceNames, "-params", ...expectedParams], undefined, undefined).resolves(cliResult);
+            await cfLocal.cfBindLocalServices(filePath, instanceNames, [], [], params);
+        });
+
     });
 
     describe("createService", () => {
