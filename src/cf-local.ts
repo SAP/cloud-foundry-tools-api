@@ -13,7 +13,7 @@ import { Cli } from "./cli";
 import { messages } from "./messages";
 import {
     ProgressHandler, CliResult, CFResource, CancellationToken, CFTarget, ServiceInstanceInfo, ServiceInfo, PlanInfo,
-    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget
+    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget, UpsTypeInfo
 } from './types';
 import { ensureQuery } from "./utils";
 import { SpawnOptions } from "child_process";
@@ -186,7 +186,7 @@ async function getServiceInstance(query: IServiceQuery, token?: CancellationToke
     if (_.size(_.get(result, 'resources')) === 1) {
         return _.head(result.resources);
     }
-    throw new Error(messages.service_not_found(_.get(_.find(query.filters, ['key', eFilters.name]), 'value')) || 'unknown');
+    throw new Error(messages.service_not_found(decodeURIComponent(_.get(_.find(query.filters, ['key', eFilters.name]), 'value')) || 'unknown'));
 }
 
 export async function cfCreateService(
@@ -304,7 +304,16 @@ export async function cfGetServicePlansList(query?: IServiceQuery, token?: Cance
     });
 }
 
-export async function cfBindLocalServices(filePath: string, instanceNames: string[], tags?: string[], serviceKeyNames?: string[]): Promise<void> {
+/**
+ * * Example of usage : cf bind-local -path .env -service-names serviceName1 serviceName2 -service-keys serviceKeys1 serviceKeys2 -tags tagsValue1 tagsValue2 -params {\"permissions\":[\"development\"]}
+ * 
+ * @param filePath : string
+ * @param instanceNames : string[]
+ * @param tags : string[] (Optional)
+ * @param serviceKeyNames : string[] (Optional)
+ * @param serviceKeyParams : any[] (Optional) Example: {"pemissions":["development"]}
+ */
+export async function cfBindLocalServices(filePath: string, instanceNames: string[], tags?: string[], serviceKeyNames?: string[], serviceKeyParams?: unknown[]): Promise<void> {
     await execQuery({
         query: [
             "bind-local",
@@ -312,8 +321,9 @@ export async function cfBindLocalServices(filePath: string, instanceNames: strin
             filePath,
             "-service-names",
             ..._.map(instanceNames, encodeURI),
-            ...(tags ? _.concat(["-tags"], tags) : []),
-            ...(serviceKeyNames ? _.concat(["-service-keys"], serviceKeyNames) : [])
+            ...(_.size(tags) ? _.concat(["-tags"], tags) : []),
+            ...(_.size(serviceKeyNames) ? _.concat(["-service-keys"], serviceKeyNames) : []),
+            ...(_.size(serviceKeyParams) ? _.concat(["-params"], _.map(serviceKeyParams, param => { return stringify(param); })) : [])
         ]
     });
 }
@@ -395,4 +405,23 @@ export async function cfGetTarget(weak?: boolean): Promise<ITarget> {
 
 export async function cfLogout() {
     await execQuery({ query: ["logout"] });
+}
+
+export async function cfCreateUpsInstance(info: UpsTypeInfo): Promise<CFResource> {
+    const data = { "name": info.instanceName };
+    let spaceGuid: string = info.space_guid;
+    if (!spaceGuid) {
+        spaceGuid = getSpaceFieldGUID(await cfGetConfigFileField("SpaceFields"));
+        if (!spaceGuid) {
+            throw new Error(messages.space_not_set);
+        }
+    }
+    _.merge(data,
+        { "space_guid": spaceGuid },
+        info.credentials ? { "credentials": info.credentials } : {},
+        info.route_service_url ? { "route_service_url": info.route_service_url } : {},
+        info.syslog_drain_url ? { "syslog_drain_url": info.syslog_drain_url } : {},
+        info.tags ? { "tags": info.tags } : {}
+    );
+    return parse(await execQuery({ query: ["curl", `/v2/user_provided_service_instances`, '-d', stringify(data), "-X", "POST"] }));
 }

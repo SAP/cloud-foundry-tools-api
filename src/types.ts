@@ -84,15 +84,22 @@ export interface CFResource {
 export interface ServiceTypeInfo {
     name: string;   // uses to filter the display of instances by service type: 'hana', 'xsuaa' and etc.
     plan: string;   // uses to filter the display of instances by plan name: 'application', 'lite' and etc. can be single name or regex expression
-    tag: string;    
-    prompt: string;
-    plans?: PlanInfo[];
-    serviceKeyName?: string;
-    ups?: {             // user-provided-services section
-        tag?: string;   // uses to filter the display of user-provided-services by tag. can be sigle name or regex expression ('/[hana|monodb]/')
-        isShow?: boolean; // force to fetch ups instances
+    tag: string;    // tag attribute name that will glued for service instance in .env (not relevant for ups)
+    prompt: string; // displaying prompt title on select service instances quick pick
+    plans?: PlanInfo[]; // internal 
+    serviceKeyName?: string;    // service key attribute name that will glued for service instance in .env (not relevant for ups)
+    serviceKeyParam?: any;  // arbitrary params in json format to be glued to service-key during 'bind-local'
+    ups?: {                 // user-provided-services section
+        tag?: string;       // uses to filter the display of user-provided-services by tag. can be sigle name or regex expression ('/[hana|monodb]/')
+        isShow?: boolean;   // force to fetch ups instances
     }; 
-    allowCreate?: boolean; // allow creation a new service instance during binding
+    allowCreate?: boolean;  // allow creation a new service instance during binding
+    quietCreation?: {
+        name?: string;          // default allocated name for creating service instance
+        namePrompt?: string;    // prompt for service instance name creation quik pick
+        params?: any;           // arbitrary params in json format for service instance creation
+        tags?: string[];        // tags list
+    };
 }
 
 export enum eFilters {
@@ -169,4 +176,13 @@ export interface ITarget { // eslint-disable-line @typescript-eslint/interface-n
     user: string;
     org?: string;
     space?: string;
+}
+
+export interface UpsTypeInfo {
+    instanceName: string;
+    space_guid?: string;
+    syslog_drain_url?: string;
+    credentials?: unknown;
+    route_service_url?: string;
+    tags?: string[];
 }
