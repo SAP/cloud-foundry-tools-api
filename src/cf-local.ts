@@ -117,7 +117,7 @@ function waitForEntity(
         }
         const state = _.get(resource, "entity.last_operation.state");
         if (state === ENTITY_STATE_INPROGRESS) {
-            progress.progress.report({ "message": messages.service_creation_started, increment: Math.floor(1 / maxNumberOfAttemps * 100) });
+            progress.progress.report({ "message": `\n${messages.service_creation_started}`, increment: Math.floor(1 / maxNumberOfAttemps * 100) });
             setTimeout(() => {
                 jobFunction().then(retriedResource => {
                     waitForEntity(resolve, reject, retriedResource, attempt + 1, maxNumberOfAttemps, jobFunction, progress);
@@ -128,7 +128,7 @@ function waitForEntity(
         } else if (state === ENTITY_STATE_FAILED) {
             reject(new Error(messages.failed_creating_entity(_.get(resource, "entity.last_operation.description"), getName(resource))));
         } else {
-            progress.progress.report({ "message": messages.service_creation_started, increment: 100 });
+            progress.progress.report({ "message": `\n${messages.service_creation_started}`, increment: 100 });
             resolve(resource);
         }
     } else {
@@ -202,7 +202,7 @@ export async function cfCreateService(
     const request = { name: instanceName, space_guid: spaceGuid, service_plan_guid: planGuid, parameters: params, tags };
     const result = await execQuery({ query: ["curl", "/v2/service_instances?accepts_incomplete=true", "-d", stringify(request), "-X", "POST"], token: progress.cancelToken });
 
-    progress.progress.report({ "message": messages.service_creation_started, increment: 1 });
+    progress.progress.report({ "message": `\n${messages.service_creation_started}`, increment: 1 });
 
     const query = { filters: [{ key: eFilters.name, value: encodeURIComponent(instanceName) }, { key: eFilters.space_guid, value: spaceGuid }] };
     return new Promise<CFResource>((resolve, reject) => {
