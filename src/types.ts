@@ -93,12 +93,10 @@ export interface ServiceTypeInfo {
         tag?: string;       // uses to filter the display of user-provided-services by tag. can be sigle name or regex expression ('/[hana|monodb]/')
         isShow?: boolean;   // force to fetch ups instances
     }; 
-    allowCreate?: boolean;  // allow creation a new service instance during binding
-    quietCreation?: {
+    allowCreate?: {         // allow creation a new service instance during binding
         name?: string;          // default allocated name for creating service instance
         namePrompt?: string;    // prompt for service instance name creation quik pick
         params?: any;           // arbitrary params in json format for service instance creation
-        tags?: string[];        // tags list
     };
 }
 
