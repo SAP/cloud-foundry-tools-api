@@ -6,7 +6,7 @@
 
 export const messages = {
   space_not_set: "Space not set",
-  service_creation_started: "Service creation started, waiting for 'Ready' state.",
+  service_creation_started: "",
   create_service_canceled_by_requester: "Cancelled by the requester - The service may have been partially created, consider deleting it using the 'cf delete-service' command",
   failed_creating_entity: (description: string, name: string) => `Could not create the ${description}  entity, consider deleting it using the 'cf delete-service ${name} command'`,
   exceed_number_of_attempts: (name: string) => `Could not change the service-instance to the 'readSync' state. You may monitor its status using the'cf service ${name}' command`,
