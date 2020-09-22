@@ -2,7 +2,7 @@
 	"name": "@sap/cf-tools",
 	"displayName": "cf-tools",
 	"description": "Cloud Foundry API tools",
-	"version": "0.6.2",
+	"version": "0.6.3",
 	"author": "SAP SE",
 	"publisher": "SAP",
 	"license": "Apache-2.0",
@@ -49,7 +49,7 @@
 	"dependencies": {
 		"comment-json": "2.1.0",
 		"fs-extra": "7.0.1",
-		"lodash": "4.17.19",
+		"lodash": "4.17.20",
 		"properties-reader": "0.3.1",
 		"url": "0.11.0"
 	}
