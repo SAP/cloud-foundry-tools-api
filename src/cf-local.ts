@@ -46,6 +46,10 @@ function getTags(resource: any): string[] {
     return _.get(resource, "entity.tags", []);
 }
 
+function getCredentials(resource: any): any {
+    return _.get(resource, "entity.credentials", {});
+}
+
 let cacheServiceInstanceTypes: any = {};
 export function clearCacheServiceInstances() {
     cacheServiceInstanceTypes = {};
@@ -239,7 +243,7 @@ export async function cfGetAvailableSpaces(orgGuid?: string): Promise<any[]> {
 
 export async function cfGetServiceInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
     return execTotal({ query: `v2/service_instances?${composeQuery(await padQuerySpace(query))}`, token }, async (info: any): Promise<ServiceInstanceInfo> => {
-        return { "label": getName(info), "serviceName": await getCachedServiceInstanceLabel(info), plan_guid: _.get(info, "entity.service_plan_guid"), tags: getTags(info) };
+        return { "label": getName(info), "serviceName": await getCachedServiceInstanceLabel(info), plan_guid: _.get(info, "entity.service_plan_guid"), tags: getTags(info), credentials: getCredentials(info) };
     });
 }
 
@@ -277,7 +281,7 @@ export async function cfGetTargets(): Promise<CFTarget[]> {
  */
 export async function cfGetUpsInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
     return execTotal({ query: `v2/user_provided_service_instances?${composeQuery(await padQuerySpace(query))}`, token }, (info: any): Promise<ServiceInstanceInfo> => {
-        return Promise.resolve({ label: getName(info), serviceName: _.get(info, "entity.type"), tags: getTags(info) });
+        return Promise.resolve({ label: getName(info), serviceName: _.get(info, "entity.type"), tags: getTags(info), credentials: getCredentials(info) });
     });
 }
 
