@@ -61,6 +61,7 @@ export interface ServiceInstanceInfo {
     tags?: string[];
     alwaysShow?: boolean;
     plan_guid?: string;
+    credentials?: any;
 }
 
 export interface ServiceInfo {

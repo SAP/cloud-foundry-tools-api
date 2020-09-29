@@ -159,12 +159,20 @@ describe("cf-local-b unit tests", () => {
                 "resources": [{
                     "entity": {
                         "name": "test_service_name1",
-                        "type": "user_provided_service_instance"
+                        "type": "user_provided_service_instance",
+                        "credentials": {
+                            "user": "user a",
+                            "tags": [ "hana", "mono" ]
+                        }
                     }
                 }, {
                     "entity": {
                         "name": "test_service_name2",
                         "type": "user_provided_service_instance",
+                        "credentials": {
+                            "user": "user b",
+                            "tags": [ "hana2", "mono1" ]
+                        },
                         "tags": ["hana", "mongodb"]
                     }
                 }]
@@ -183,9 +191,11 @@ describe("cf-local-b unit tests", () => {
             expect(result).to.have.lengthOf(2);
             expect(result[0].label).to.be.equal("test_service_name1");
             assert.deepEqual(result[0].tags, []);
+            assert.deepEqual(result[0].credentials.tags, ["hana", "mono"]);
             expect(result[1].label).to.be.equal("test_service_name2");
             expect(result[1].serviceName).to.be.equal("user_provided_service_instance");
             assert.deepEqual(result[1].tags, ["hana", "mongodb"]);
+            assert.deepEqual(result[1].credentials.tags, ["hana2", "mono1"]);
         });
 
     });
