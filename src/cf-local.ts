@@ -164,20 +164,16 @@ async function execTotal(args: { query: string; options?: SpawnOptions; token?: 
     return _.compact(collection);
 }
 
-async function getCachedServiceInstanceLabel(service: any): Promise<string> {
-    try {
-        if (_.get(service, ['entity', 'service_url'])) {
-            if (!cacheServiceInstanceTypes[service.entity.service_url]) {
-                cacheServiceInstanceTypes[service.entity.service_url] = await execQuery({ query: ["curl", service.entity.service_url] }, (data) => {
-                    return Promise.resolve(getLabel(data));
-                }, true);
-            }
-            return cacheServiceInstanceTypes[service.entity.service_url];
+function getCachedServiceInstanceLabel(service: any): Promise<string> {
+    if (_.get(service, ['entity', 'service_url'])) {
+        if (!cacheServiceInstanceTypes[service.entity.service_url]) {
+            cacheServiceInstanceTypes[service.entity.service_url] = execQuery({ query: ["curl", service.entity.service_url] }, (data) => {
+                return Promise.resolve(getLabel(data));
+            }, true);
         }
-    } catch (e) {
-        // log error
+        return cacheServiceInstanceTypes[service.entity.service_url];
     }
-    return 'unknown';
+    return Promise.resolve('unknown');
 }
 
 /**
@@ -242,8 +238,30 @@ export async function cfGetAvailableSpaces(orgGuid?: string): Promise<any[]> {
 }
 
 export async function cfGetServiceInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
-    return execTotal({ query: `v2/service_instances?${composeQuery(await padQuerySpace(query))}`, token }, async (info: any): Promise<ServiceInstanceInfo> => {
-        return { "label": getName(info), "serviceName": await getCachedServiceInstanceLabel(info), plan_guid: _.get(info, "entity.service_plan_guid"), tags: getTags(info), credentials: getCredentials(info) };
+    const serviceNames: Promise<string>[] = [];
+    const collection = await execTotal({ query: `v2/service_instances?${composeQuery(await padQuerySpace(query))}`, token }, (info: any): Promise<unknown> => {
+        const promise = getCachedServiceInstanceLabel(info);
+        serviceNames.push(promise);
+        return Promise.resolve({ "label": getName(info), "serviceName": promise, plan_guid: _.get(info, "entity.service_plan_guid"), tags: getTags(info), credentials: getCredentials(info) });
+    });
+    return Promise.race(serviceNames).then(async () => {
+        const instances: ServiceInstanceInfo[] = [];
+        for (const instance of collection) {
+            let serviceName: string;
+            try {
+                serviceName = await _.get(instance, 'serviceName');
+            } catch(e) {
+                serviceName = 'unknown';
+            }
+            instances.push({
+                label: _.get(instance, 'label'),
+                serviceName: serviceName,
+                plan_guid: _.get(instance, 'plan_guid'),
+                tags: _.get(instance, 'tags'),
+                credentials: _.get(instance, 'credentials')
+            });
+        }
+        return _.compact(instances);
     });
 }
 
@@ -379,11 +397,17 @@ export async function cfGetInstanceMetadata(instanceName: string): Promise<any> 
             { key: eFilters.service_instance_guid, value: _.get(instance, ['metadata', 'guid']) }
         ]
     });
+    let serviceName: string;
+    try {
+        serviceName = await getCachedServiceInstanceLabel(instance);
+    } catch(e) {
+        serviceName = 'unknown';
+    }
     return {
         serviceName: _.get(instance, ['entity', 'name']),
         plan: _.head(plans).label,
         plan_guid: _.get(instance, ['entity', 'service_plan_guid']),
-        service: await getCachedServiceInstanceLabel(instance)
+        service: serviceName
     };
 }
 

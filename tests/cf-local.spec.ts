@@ -715,6 +715,44 @@ describe("cf-local unit tests", () => {
                 plan_guid: result.resources[0].entity.service_plan_guid
             });
         });
+
+        it("cfGetInstanceMetadata - service unknown", async () => {
+            const cliPlanResult: CliResult = {
+                stdout: "",
+                stderr: "",
+                exitCode: 0,
+                error: ""
+            };
+            cliPlanResult.stdout = `{
+                "resources": [{
+                "entity": {
+                    "service_plans_url": "service_plans_url_1",
+                    "name": "label_1",
+                        "description": "description_1",
+                        "service_plan_guid": "1234-5678-9876",
+                        "service_guid": "5555-6666-9999"
+                },
+                "metadata": {
+                    "guid": 1
+                }
+                }]
+            }`;
+
+            cliResult.exitCode = 0;
+            cliResult.stdout = JSON.stringify(result);
+            const value = 'al gi';
+            fsExtraMock.expects("readFile").withExactArgs(cfLocal.cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields": { "GUID": "e4b60b76-2e56-42a8-b8b6-2ff5fb041266"}}`);
+            cliMock.expects("execute").withExactArgs(["curl", `/v2/service_instances?q=name:al%20gi;q=space_guid:e4b60b76-2e56-42a8-b8b6-2ff5fb041266&results-per-page=297`], undefined, undefined).resolves(cliResult);
+            cliMock.expects("execute").withExactArgs(["curl", `/v2/service_plans?q=service_instance_guid:67755c27-28ed-4087-9688-c07d92f3bcc9&results-per-page=297`], undefined, undefined).resolves(cliPlanResult);
+            cliMock.expects("execute").withArgs(["curl", "/v2/services/888f0f72-3603-4f66-97f3-4b66b559f908"]).rejects(new Error());
+            const metadata = await cfLocal.cfGetInstanceMetadata(value);
+            assert.deepEqual(metadata, {
+                serviceName: result.resources[0].entity.name,
+                plan: 'label_1',
+                service: 'unknown',
+                plan_guid: result.resources[0].entity.service_plan_guid
+            });
+        });
     });
 
 });
