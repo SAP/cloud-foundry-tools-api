@@ -7,12 +7,11 @@
 import * as _ from "lodash";
 import * as sinon from "sinon";
 import * as cfLocal from "../src/cf-local";
-import { ServiceInstanceInfo, ITarget, CliResult } from "../src/types";
+import { ServiceInstanceInfo, ITarget, CliResult, ServiceInfo, eFilters, eOperation, PlanInfo } from "../src/types";
 import * as cli from "../src/cli";
 import { getServicesInstancesFilteredByType, getInstanceMetadata, isTargetSet, getInstanceCredentials, createServiceInstance } from "../src/cfServicesUtil";
 import { expect, assert } from "chai";
 import { fail } from "assert";
-
 
 describe('services unit package tests', () => {
     let sandbox: any;
@@ -38,24 +37,50 @@ describe('services unit package tests', () => {
     });
 
     describe("getServicesInstancesFilteredByType", () => {
-        const instances: ServiceInstanceInfo[] = [{ label: "label1", serviceName: "service1" }, { label: "label2", serviceName: "service1" }, { label: "label3", serviceName: "service2" }];
+        const types = ['saas-registry', 'audolog'];
+        const services: ServiceInfo[] = [{
+            description: 'description1',
+            guid: 'd2ff128b-e1a8-15f7-828a-24be6173db7b',
+            label: types[0],
+            service_plans_url: '/v2/services/d2ff128b-A1a8-45f7-828a-24be6173db7b/service_plans'
+        }, {
+            description: 'description2',
+            guid: 'd2ff128b-e2a8-25f7-828a-24be6173db7b',
+            label: types[1],
+            service_plans_url: '/v2/services/d2ff128b-s1a8-45f7-828a-24be6173db7b/service_plans'
+        }];
+        const plans: Promise<PlanInfo[]>[] = [
+            Promise.resolve([{ label: 'abap', guid: 'abap_guid', description: 'abap_description' }, { label: 'abap_cloud', guid: 'abap_cloud_guid', description: 'abap_cloud_description' }]),
+            Promise.resolve([{ label: 'abap_db', guid: 'abap_db_guid', description: 'abap_db_description' }])
+        ];
+        const instances: ServiceInstanceInfo[] = [{ label: "label1", serviceName: types[1] }, { label: "label2", serviceName: "service1" }, { label: "label3", serviceName: types[0] }];
 
         it("ok", async () => {
+            const query = { 'filters': [{ key: eFilters.label, value: _.join(_.map(types, encodeURIComponent)), op: eOperation.IN }] };
+            mockCfLocal.expects("cfGetServices").withExactArgs(query).resolves(services);
+            mockCfLocal.expects("cfGetServicePlans").withExactArgs(services[0].service_plans_url).resolves(plans);
+            mockCfLocal.expects("cfGetServicePlans").withExactArgs(services[1].service_plans_url).resolves(plans);
             mockCfLocal.expects("cfGetServiceInstances").resolves(instances);
-            expect(_.size(await getServicesInstancesFilteredByType(['service1', 'serviceAny']))).to.be.equal(2);
+            assert.deepEqual(_.map(await getServicesInstancesFilteredByType(types), 'label'), [instances[0].label, instances[2].label]);
         });
 
         it("nothing match", async () => {
+            const query = { 'filters': [{ key: eFilters.label, value: _.join(_.map(['service3', 'serviceAny'], encodeURIComponent)), op: eOperation.IN }] };
+            mockCfLocal.expects("cfGetServices").withExactArgs(query).resolves([]);
             mockCfLocal.expects("cfGetServiceInstances").resolves(instances);
             expect(_.size(await getServicesInstancesFilteredByType(['service3', 'serviceAny']))).to.be.equal(0);
         });
 
         it("undefined types", async () => {
+            const query = { 'filters': [{ key: eFilters.label, value: _.join(_.map(null, encodeURIComponent)), op: eOperation.IN }] };
+            mockCfLocal.expects("cfGetServices").withExactArgs(query).resolves([]);
             mockCfLocal.expects("cfGetServiceInstances").resolves(instances);
             expect(_.size(await getServicesInstancesFilteredByType(null))).to.be.equal(0);
         });
 
         it("thrown exception", async () => {
+            const query = { 'filters': [{ key: eFilters.label, value: _.join(_.map(['filter'], encodeURIComponent)), op: eOperation.IN }] };
+            mockCfLocal.expects("cfGetServices").withExactArgs(query).resolves([]);
             const error = new Error("cfGetServiceInstances failed");
             mockCfLocal.expects("cfGetServiceInstances").throws(error);
             try {

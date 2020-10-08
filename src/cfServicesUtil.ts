@@ -6,11 +6,22 @@
 
 import { Cli } from "./cli";
 import * as _ from "lodash";
-import { ServiceInstanceInfo, ServiceKey } from "./types";
-import { cfGetServiceInstances, cfGetInstanceMetadata, cfGetTarget } from "./cf-local";
+import { eFilters, eOperation, ServiceInstanceInfo, ServiceKey } from "./types";
+import { cfGetServiceInstances, cfGetInstanceMetadata, cfGetTarget, cfGetServices, cfGetServicePlans } from "./cf-local";
+
+async function getServicePlansGuidList(serviceTypes: string[]): Promise<string[]> {
+	return _.map(_.flatten(await Promise.all(
+		_.map(await cfGetServices({ 'filters': [{ key: eFilters.label, value: _.join(_.map(serviceTypes, encodeURIComponent)), op: eOperation.IN }] }), service => {
+			return cfGetServicePlans(service.service_plans_url);
+		})
+	)), 'guid');
+}
 
 export async function getServicesInstancesFilteredByType(serviceTypes: string[]): Promise<ServiceInstanceInfo[]> {
-    return _.filter(await cfGetServiceInstances(), (service => { return _.includes(serviceTypes, service.serviceName); }));
+    return _.filter(
+        await cfGetServiceInstances({ 'filters': [{ key: eFilters.service_plan_guid, value: _.join(await getServicePlansGuidList(serviceTypes)), op: eOperation.IN }] }),
+        (service => { return _.includes(serviceTypes, service.serviceName); })
+    );
 }
 
 export async function getInstanceCredentials(instanceName: string): Promise<ServiceKey> {

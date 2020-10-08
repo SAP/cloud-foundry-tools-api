@@ -115,7 +115,8 @@ export enum eFilters {
     manager_guid = 'manager_guid',
     billing_manager_guid = 'billing_manager_guid',
     auditor_guid = 'auditor_guid',
-    status = 'status'
+    status = 'status',
+    label = 'label'
 }
 
 export enum eOperation {
