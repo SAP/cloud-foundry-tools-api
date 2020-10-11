@@ -97,7 +97,7 @@ export interface ServiceTypeInfo {
     allowCreate?: {         // allow creation a new service instance during binding
         name?: string;          // default allocated name for creating service instance
         namePrompt?: string;    // prompt for service instance name creation quik pick
-        params?: any;           // arbitrary params in json format for service instance creation
+        getParams?: () => Promise<any>; // arbitrary async params getter in json format for service instance creation.
     };
 }
 
