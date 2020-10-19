@@ -17,7 +17,7 @@ export async function apiGetServicesInstancesFilteredByType(serviceTypes: string
     return serviceUtils.getServicesInstancesFilteredByType(serviceTypes);
 }
 
-export async function apiGetInstanceCredentials(instanceName: string): Promise<ServiceKey> {
+export async function apiGetInstanceCredentials(instanceName: string): Promise<any> {
     return serviceUtils.getInstanceCredentials(instanceName);
 }
 
