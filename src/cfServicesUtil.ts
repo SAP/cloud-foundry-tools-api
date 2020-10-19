@@ -24,7 +24,7 @@ export async function getServicesInstancesFilteredByType(serviceTypes: string[])
     );
 }
 
-export async function getInstanceCredentials(instanceName: string): Promise<ServiceKey> {
+export async function getInstanceCredentials(instanceName: string): Promise<any> {
     await Cli.execute(["create-service-key", instanceName, "key"]);
     const serviceCredentials = await Cli.execute(["service-key", instanceName, "key"]);
     let res = serviceCredentials.stdout;
