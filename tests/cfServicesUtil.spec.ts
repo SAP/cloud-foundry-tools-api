@@ -6,6 +6,7 @@
 
 import * as _ from "lodash";
 import * as sinon from "sinon";
+import * as fsextra from "fs-extra";
 import * as cfLocal from "../src/cf-local";
 import { ServiceInstanceInfo, ITarget, CliResult, ServiceInfo, eFilters, eOperation, PlanInfo } from "../src/types";
 import * as cli from "../src/cli";
@@ -17,6 +18,7 @@ describe('services unit package tests', () => {
     let sandbox: any;
     let mockCfLocal: any;
     let mockCli: any;
+    let fsExtraMock: any;
 
     before(() => {
         sandbox = sinon.createSandbox();
@@ -29,11 +31,13 @@ describe('services unit package tests', () => {
     beforeEach(() => {
         mockCfLocal = sandbox.mock(cfLocal);
         mockCli = sandbox.mock(cli.Cli);
+        fsExtraMock = sandbox.mock(fsextra);
     });
 
     afterEach(() => {
         mockCfLocal.verify();
         mockCli.verify();
+        fsExtraMock.verify();
     });
 
     describe("getServicesInstancesFilteredByType", () => {
@@ -165,48 +169,136 @@ describe('services unit package tests', () => {
 
         const instanceName = 'myService';
         const result: CliResult = {
-            stdout: `unexpected data output {
-                "apiurl": "https://api.authentication.sap.hana.ondemand.com",
-                "clientid": "sb-xsuaa_XXXX!t192",
-                "clientsecret": "QjBEEFlKyrPbcPHPQLjEy5ElXN4=",
-                "identityzone": "devxnew",
-                "identityzoneid": "145d56cd-d038-45d1-88ab-c9c7d0c5ebdf",
-                "sburl": "https://internal-xsuaa.noauthentication.sap.hana.ondemand.com",
-                "tenantid": "145d56cd-d038-45d1-812b-c9c7d0c5ebdf",
-                "tenantmode": "mode",
-                "uaadomain": "zauthentication.sap.hana.ondemand.com",
-                "url": "https://devxnew.authentication.sap.hana.ondemand.com",
-                "verificationkey": "-----BEGIN PUBLIC KEY-----MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxJ7mUluDQIDAQAB-----END PUBLIC KEY-----",
-                "xsappname": "xsuaa_1595943223466!t192"
-            }`,
+            stdout: "",
             stderr: "",
             exitCode: 0
         };
 
+        result.stdout = `{
+            "resources": [{
+                "metadata": {
+                    "url": "/v2/service_instances/a6caf36f-2523-401f-aed1-b25ed6a7c2d9"
+                },
+                "entity": {
+                    "name": "test",
+                    "credentials" : {
+                        "apiurl": "https://api.authentication.sap.hana.ondemand.com",
+                        "clientid": "clientid",
+                        "sburl": "https://ondemand.com",
+                        "tenantmode": "mode",
+                        "url": "https://ondemand.com",
+                        "xsappname": "xsuaa_1595943223466!t192"
+                    }
+                }
+            }]
+        }`;
+
         it("ok", async () => {
-            mockCli.expects("execute").withExactArgs(["create-service-key", instanceName, 'key']).resolves();
-            mockCli.expects("execute").withExactArgs(["service-key", instanceName, 'key']).resolves(result);
-            assert.deepEqual(await getInstanceCredentials(instanceName), JSON.parse(result.stdout.substr(result.stdout.indexOf("{"))));
+            const cliResult: CliResult = {
+                stdout: "",
+                stderr: "",
+                exitCode: 0
+            };
+            const iGuid = "a6caf36f-2523-401f-aed1-b25ed6a7c2d9";
+            cliResult.stdout = `{
+                "resources": [{
+                    "metadata": {
+                        "guid": "${iGuid}",
+                        "url": "/v2/service_instances/a6caf36f-2523-401f-aed1-b25ed6a7c2d9"
+                    },
+                    "entity": {
+                        "name": "test"
+                    }
+                }]
+            }`;
+            const spaceGuid = "testSpaceGUID";
+            fsExtraMock.expects("readFile").withExactArgs(cfLocal.cfGetConfigFilePath(), "utf8").resolves(`{ "SpaceFields": { "GUID": "${spaceGuid}" }}`);
+            mockCli.expects("execute").withExactArgs(['curl', `v2/service_instances?q=name:${encodeURIComponent(instanceName)};q=space_guid:${spaceGuid}&results-per-page=297`], undefined, undefined).resolves(cliResult);
+            mockCli.expects("execute").withExactArgs(['curl', `v2/service_keys?q=service_instance_guid:${iGuid}&results-per-page=297`], undefined, undefined).resolves(result);
+            const credentials = await getInstanceCredentials(instanceName);
+            assert.deepEqual(credentials, JSON.parse(result.stdout).resources[0].entity.credentials);
         });
 
-        it("empty", async () => {
-            result.stdout = `{}`;
-            mockCli.expects("execute").withExactArgs(["create-service-key", instanceName, 'key']).resolves();
-            mockCli.expects("execute").withExactArgs(["service-key", instanceName, 'key']).resolves(result);
-            assert.deepEqual(await getInstanceCredentials(instanceName), JSON.parse(result.stdout.substr(result.stdout.indexOf("{"))));
+        it("service instance not found", async () => {
+            const cliResult: CliResult = {
+                stdout: `{ "resources": [] }`,
+                stderr: "",
+                exitCode: 0
+            };
+            const spaceGuid = "testSpaceGUID";
+            fsExtraMock.expects("readFile").withExactArgs(cfLocal.cfGetConfigFilePath(), "utf8").resolves(`{ "SpaceFields": { "GUID": "${spaceGuid}" }}`);
+            mockCli.expects("execute").withExactArgs(['curl', `v2/service_instances?q=name:${encodeURIComponent(instanceName)};q=space_guid:${spaceGuid}&results-per-page=297`], undefined, undefined).resolves(cliResult);
+            expect(await getInstanceCredentials(instanceName)).to.be.undefined;
+        });
+
+        it("no keys - create one", async () => {
+            const cliResult: CliResult = {
+                stdout: "",
+                stderr: "",
+                exitCode: 0
+            };
+            const iGuid = "a6caf36f-2523-401f-aed1-b25ed6a7c2d9";
+            cliResult.stdout = `{
+                "resources": [{
+                    "metadata": {
+                        "guid": "${iGuid}",
+                        "url": "/v2/service_instances/a6caf36f-2523-401f-aed1-b25ed6a7c2d9"
+                    },
+                    "entity": {
+                        "name": "test"
+                    }
+                }]
+            }`;
+            const spaceGuid = "testSpaceGUID";
+            fsExtraMock.expects("readFile").withExactArgs(cfLocal.cfGetConfigFilePath(), "utf8").resolves(`{ "SpaceFields": { "GUID": "${spaceGuid}" }}`);
+            mockCli.expects("execute").withExactArgs(['curl', `v2/service_instances?q=name:${encodeURIComponent(instanceName)};q=space_guid:${spaceGuid}&results-per-page=297`], undefined, undefined).resolves(cliResult);
+            const keysResult: CliResult = {
+                stdout: `{ "resources": [] }`,
+                stderr: "",
+                exitCode: 0
+            };
+            mockCli.expects("execute").withExactArgs(['curl', `v2/service_keys?q=service_instance_guid:${iGuid}&results-per-page=297`], undefined, undefined).resolves(keysResult);
+            mockCli.expects("execute").withExactArgs(["create-service-key", encodeURIComponent(instanceName), 'key']).resolves();
+            mockCli.expects("execute").withExactArgs(['curl', `v2/service_keys?q=service_instance_guid:${iGuid};q=name:key&results-per-page=297`], undefined, undefined).resolves(result);
+            const credentials = await getInstanceCredentials(instanceName);
+            assert.deepEqual(credentials, JSON.parse(result.stdout).resources[0].entity.credentials);
         });
 
         it("thrown exception", async () => {
+            const cliResult: CliResult = {
+                stdout: "",
+                stderr: "",
+                exitCode: 0
+            };
+            const iGuid = "a6caf36f-2523-401f-aed1-b25ed6a7c2d9";
+            cliResult.stdout = `{
+                "resources": [{
+                    "metadata": {
+                        "guid": "${iGuid}",
+                        "url": "/v2/service_instances/a6caf36f-2523-401f-aed1-b25ed6a7c2d9"
+                    },
+                    "entity": {
+                        "name": "test"
+                    }
+                }]
+            }`;
+            const spaceGuid = "testSpaceGUID";
+            fsExtraMock.expects("readFile").withExactArgs(cfLocal.cfGetConfigFilePath(), "utf8").resolves(`{ "SpaceFields": { "GUID": "${spaceGuid}" }}`);
+            mockCli.expects("execute").withExactArgs(['curl', `v2/service_instances?q=name:${encodeURIComponent(instanceName)};q=space_guid:${spaceGuid}&results-per-page=297`], undefined, undefined).resolves(cliResult);
+            const keysResult: CliResult = {
+                stdout: `{ "resources": [] }`,
+                stderr: "",
+                exitCode: 0
+            };
+            mockCli.expects("execute").withExactArgs(['curl', `v2/service_keys?q=service_instance_guid:${iGuid}&results-per-page=297`], undefined, undefined).resolves(keysResult);
             const error = new Error("cfGetTarget failed");
-            mockCli.expects("execute").withExactArgs(["create-service-key", instanceName, 'key']).throws(error);
+            mockCli.expects("execute").withExactArgs(["create-service-key", encodeURIComponent(instanceName), 'key']).throws(error);
             try {
                 await getInstanceCredentials(instanceName);
-                fail("should fail");
             } catch (e) {
                 expect(e.message).to.be.equal(error.message);
             }
         });
-
     });
 
     describe("createServiceInstance", () => {
