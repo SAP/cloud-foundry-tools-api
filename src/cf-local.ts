@@ -244,8 +244,13 @@ export async function cfGetServiceInstances(query?: IServiceQuery, token?: Cance
         serviceNames.push(promise);
         return Promise.resolve({ "label": getName(info), "serviceName": promise, plan_guid: _.get(info, "entity.service_plan_guid"), tags: getTags(info), credentials: getCredentials(info) });
     });
+
+    if(!_.size(serviceNames)) { // sapjira issue DEVXBUGS-7773
+        return [];
+    }
+   
     return Promise.race(serviceNames).then(async () => {
-        const instances: ServiceInstanceInfo[] = [];
+        const instances: ServiceInstanceInfo[] = [];        
         for (const instance of collection) {
             let serviceName: string;
             try {
