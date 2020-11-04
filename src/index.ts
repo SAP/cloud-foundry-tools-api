@@ -10,7 +10,7 @@ export * from './cf-local';
 export * from './messages';
 export * from './utils';
 
-import { ServiceKey, ServiceInstanceInfo } from './types';
+import { ServiceInstanceInfo } from './types';
 import * as serviceUtils from './cfServicesUtil';
 
 export async function apiGetServicesInstancesFilteredByType(serviceTypes: string[]): Promise<ServiceInstanceInfo[]> {

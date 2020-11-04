@@ -538,5 +538,17 @@ describe("cf-local-a unit tests", () => {
             expect(result[3].serviceName).to.be.equal("testLabel1");
             expect(result[3].label).to.be.equal("test_service_name4");
         });
+
+        it("cliResult.stdout is empty", async () => {
+            cliResult.exitCode = 0;
+            cliResult.error = "";
+            cliResult.stdout = `{
+                "resources": []
+            }`;
+            const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`;
+            cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
+            const result = await cfLocal.cfGetServiceInstances({ filters: [{ key: eFilters.space_guid, value: "testSpaceGUID" }] });
+            expect(result).to.have.lengthOf(0);
+        });
     });
 });
