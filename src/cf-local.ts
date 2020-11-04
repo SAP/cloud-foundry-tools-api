@@ -250,7 +250,7 @@ export async function cfGetServiceInstances(query?: IServiceQuery, token?: Cance
             let serviceName: string;
             try {
                 serviceName = await _.get(instance, 'serviceName');
-            } catch(e) {
+            } catch (e) {
                 serviceName = 'unknown';
             }
             instances.push({
@@ -400,7 +400,7 @@ export async function cfGetInstanceMetadata(instanceName: string): Promise<any> 
     let serviceName: string;
     try {
         serviceName = await getCachedServiceInstanceLabel(instance);
-    } catch(e) {
+    } catch (e) {
         serviceName = 'unknown';
     }
     return {
@@ -453,3 +453,19 @@ export async function cfCreateUpsInstance(info: UpsTypeInfo): Promise<CFResource
     );
     return parse(await execQuery({ query: ["curl", `/v2/user_provided_service_instances`, '-d', stringify(data), "-X", "POST"] }));
 }
+
+export async function cfGetInstanceKeyParameters(instanceName: string): Promise<any | undefined> {
+    let query = { filters: [{ key: eFilters.name, value: encodeURIComponent(instanceName) }] };
+    const collection = await execTotal({ query: `v2/service_instances?${composeQuery(await padQuerySpace(query))}` });
+    if (!_.size(collection)) {
+        return undefined; // service instance not found
+    }
+    query = { filters: [{ key: eFilters.service_instance_guid, value: _.get(collection, ["0", "metadata", "guid"]) }] };
+    let keys = await cfGetServiceKeys(query);
+    if (!_.size(keys)) {
+        await Cli.execute(["create-service-key", encodeURIComponent(instanceName), "key"]);
+        query.filters.push({ key: eFilters.name, value: "key" });
+        keys = await cfGetServiceKeys(query);
+    }
+    return _.get(keys, ["0", "entity", "credentials"]);
+} 
