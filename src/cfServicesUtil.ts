@@ -6,15 +6,15 @@
 
 import { Cli } from "./cli";
 import * as _ from "lodash";
-import { eFilters, eOperation, ServiceInstanceInfo, ServiceKey } from "./types";
-import { cfGetServiceInstances, cfGetInstanceMetadata, cfGetTarget, cfGetServices, cfGetServicePlans } from "./cf-local";
+import { eFilters, eOperation, ServiceInstanceInfo } from "./types";
+import { cfGetServiceInstances, cfGetInstanceMetadata, cfGetTarget, cfGetServices, cfGetServicePlans, cfGetInstanceKeyParameters } from "./cf-local";
 
 async function getServicePlansGuidList(serviceTypes: string[]): Promise<string[]> {
-	return _.map(_.flatten(await Promise.all(
-		_.map(await cfGetServices({ 'filters': [{ key: eFilters.label, value: _.join(_.map(serviceTypes, encodeURIComponent)), op: eOperation.IN }] }), service => {
-			return cfGetServicePlans(service.service_plans_url);
-		})
-	)), 'guid');
+    return _.map(_.flatten(await Promise.all(
+        _.map(await cfGetServices({ 'filters': [{ key: eFilters.label, value: _.join(_.map(serviceTypes, encodeURIComponent)), op: eOperation.IN }] }), service => {
+            return cfGetServicePlans(service.service_plans_url);
+        })
+    )), 'guid');
 }
 
 export async function getServicesInstancesFilteredByType(serviceTypes: string[]): Promise<ServiceInstanceInfo[]> {
@@ -24,15 +24,11 @@ export async function getServicesInstancesFilteredByType(serviceTypes: string[])
     );
 }
 
-export async function getInstanceCredentials(instanceName: string): Promise<any> {
-    await Cli.execute(["create-service-key", instanceName, "key"]);
-    const serviceCredentials = await Cli.execute(["service-key", instanceName, "key"]);
-    let res = serviceCredentials.stdout;
-    res = res.substr(res.indexOf("{"));
-    return JSON.parse(res);
+export function getInstanceCredentials(instanceName: string): Promise<any> {
+    return cfGetInstanceKeyParameters(instanceName);
 }
 
-export async function createServiceInstance(serviceType: string, servicePlan: string, serviceInstanceName: string,
+export function createServiceInstance(serviceType: string, servicePlan: string, serviceInstanceName: string,
     config?: any): Promise<any> {
     let args = ["create-service", serviceType, servicePlan, serviceInstanceName];
     if (config) {
@@ -41,7 +37,7 @@ export async function createServiceInstance(serviceType: string, servicePlan: st
     return Cli.execute(args);
 }
 
-export async function getInstanceMetadata(instanceName: string): Promise<any> {
+export function getInstanceMetadata(instanceName: string): Promise<any> {
     return cfGetInstanceMetadata(instanceName);
 }
 
