@@ -29,7 +29,7 @@
 		"@types/lodash": "^4.14.123",
 		"@types/comment-json": "2.4.2",
 		"@types/chai": "^4.1.7",
-		"@types/sinon": "^7.0.13",
+		"@types/sinon": "^9.0.8",
 		"@types/mocha": "^8.0.3",
 		"@types/node": "^10.12.21",
 		"@types/properties-reader": "0.0.1",
