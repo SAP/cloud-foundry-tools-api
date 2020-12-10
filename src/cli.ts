@@ -72,11 +72,11 @@ export class Cli {
                 resolve({ "stdout": stdout, "stderr": stderr, error: Cli.CF_LOGIN_ERROR, exitCode: CF_CMD_EXIT_CODE.ERROR });
                 return;
             } else if (stdout.includes('failed') && stdout.includes('Error:')) {
-                // Jira: https://sapjira.wdf.sap.corp/browse/DEVXBUGS-5660
+                // DEVXBUGS-5660
                 resolve({ "stdout": stdout, "stderr": stderr, error: stdout, exitCode: CF_CMD_EXIT_CODE.ERROR });
                 return;
             } else if (stdout.startsWith('FAILED') && stdout.indexOf("No API endpoint set") > 0) {
-                // Jira: https://sapjira.wdf.sap.corp/browse/DEVXBUGS-6488
+                // DEVXBUGS-6488
                 resolve({ "stdout": stdout, "stderr": stderr, error: stdout, exitCode: CF_CMD_EXIT_CODE.ERROR });
                 return;
             }
