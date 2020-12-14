@@ -1,17 +1,17 @@
 {
 	"name": "@sap/cf-tools",
 	"displayName": "cf-tools",
-	"description": "Cloud Foundry API tools",
 	"version": "0.6.8",
-	"author": "SAP SE",
-	"publisher": "SAP",
-	"license": "Apache-2.0",
-	"repository": {
-		"url": "https://github.com/sap/cloud-foundry-tools-api.git"
-	},
+	"description": "Cloud Foundry API tools",
 	"bugs": {
 		"url": "https://github.com/sap-staging/cloud-foundry-tools-api.git/issues"
 	},
+	"repository": {
+		"url": "https://github.com/sap/cloud-foundry-tools-api.git"
+	},
+	"license": "Apache-2.0",
+	"author": "SAP SE",
+	"publisher": "SAP",
 	"main": "./out/src/index.js",
 	"types": "out/src/index.d.ts",
 	"files": [
@@ -22,33 +22,22 @@
 		"compile": "tsc -p ./",
 		"lint": "eslint . --ext .ts,.tsx --cache",
 		"pretest": "npm run compile & npm run lint",
-		"test": "nyc mocha -p tsconfig.json --config ./.mocharc.yaml"
+		"test": "nyc mocha -p tsconfig.json --config ./.mocharc.yaml --no-parallel"
 	},
-	"devDependencies": {
-		"@types/fs-extra": "^9.0.2",
-		"@types/lodash": "^4.14.123",
-		"@types/comment-json": "2.4.2",
-		"@types/chai": "^4.1.7",
-		"@types/sinon": "^9.0.8",
-		"@types/mocha": "^8.0.3",
-		"@types/node": "^14.14.10",
-		"@types/properties-reader": "2.1.0",
-		"@typescript-eslint/parser": "^2.30.0",
-		"@typescript-eslint/eslint-plugin": "^2.30.0",
-		"eslint": "^6.8.0",
-		"eslint-config-prettier": "^6.11.0",
-		"prettier": "^2.0.5",
-		"chai": "^4.2.0",
-		"sinon": "^9.2.1",
-		"mocha": "^6.2.0",
-		"nyc": "^15.1.0",
-		"ts-node": "^9.0.0",
-		"typescript": "^4.0.5",
-		"coveralls": "^3.1.0",
-                "cz-conventional-changelog": "3.3.0",
-                "@commitlint/cli": "11.0.0",
-                "@commitlint/config-conventional": "11.0.0",
-                "husky": "4.3.6"
+	"husky": {
+		"hooks": {
+			"commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+		}
+	},
+	"commitlint": {
+		"extends": [
+			"@commitlint/config-conventional"
+		]
+	},
+	"config": {
+		"commitizen": {
+			"path": "cz-conventional-changelog"
+		}
 	},
 	"dependencies": {
 		"comment-json": "4.1.0",
@@ -56,20 +45,31 @@
 		"lodash": "4.17.20",
 		"properties-reader": "2.1.1",
 		"url": "0.11.0"
-	 },
-         "husky": {
-                "hooks": {
-                    "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-                }
-         },
-         "config": {
-                "commitizen": {
-                     "path": "cz-conventional-changelog"
-                }
-         },
-         "commitlint": {
-                "extends": [
-                      "@commitlint/config-conventional"
-                ]
-         }
+	},
+	"devDependencies": {
+		"@commitlint/cli": "11.0.0",
+		"@commitlint/config-conventional": "11.0.0",
+		"@types/chai": "^4.1.7",
+		"@types/comment-json": "2.4.2",
+		"@types/fs-extra": "^9.0.2",
+		"@types/lodash": "^4.14.123",
+		"@types/mocha": "^8.0.3",
+		"@types/node": "^14.14.10",
+		"@types/properties-reader": "2.1.0",
+		"@types/sinon": "^9.0.8",
+		"@typescript-eslint/eslint-plugin": "^2.30.0",
+		"@typescript-eslint/parser": "^2.30.0",
+		"chai": "^4.2.0",
+		"coveralls": "^3.1.0",
+		"cz-conventional-changelog": "3.3.0",
+		"eslint": "^6.8.0",
+		"eslint-config-prettier": "^6.11.0",
+		"husky": "4.3.6",
+		"mocha": "^8.2.1",
+		"nyc": "^15.1.0",
+		"prettier": "^2.0.5",
+		"sinon": "^9.2.1",
+		"ts-node": "^9.0.0",
+		"typescript": "^4.0.5"
+	}
 }
