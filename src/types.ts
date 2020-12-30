@@ -83,8 +83,8 @@ export interface CFResource {
 }
 
 export interface ServiceTypeInfo {
-    name: string;   // uses to filter the display of instances by service type: 'hana', 'xsuaa' and etc.
-    plan: string;   // uses to filter the display of instances by plan name: 'application', 'lite' and etc. can be single name or regex expression
+    name: string;   // uses to filter the display of instances by service type: 'hana', 'xsuaa' and etc. (Regex)
+    plan: string;   // uses to filter the display of instances by plan name: 'application', 'lite' and etc. can be single name or regex expression (Regex)
     tag: string;    // tag attribute name that will glued for service instance in .env (not relevant for ups)
     prompt: string; // displaying prompt title on select service instances quick pick
     plans?: PlanInfo[]; // internal 
@@ -95,6 +95,9 @@ export interface ServiceTypeInfo {
         isShow?: boolean;   // force to fetch ups instances
     }; 
     allowCreate?: {         // allow creation a new service instance during binding
+        serviceName?: string;   // uses to filter the display of service instance creation (Regex). instances by service type: 'hana', 'xsuaa' and etc.
+        plan?: string;          // plan for the created service instance (Regex)
+        tag?: string;           // tag attribute name that will glued for service instance in .env (not relevant for ups)
         name?: string;          // default allocated name for creating service instance
         namePrompt?: string;    // prompt for service instance name creation quik pick
         getParams?: () => Promise<any>; // arbitrary async params getter in json format for service instance creation.
