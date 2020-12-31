@@ -308,8 +308,8 @@ export async function cfGetUpsInstances(query?: IServiceQuery, token?: Cancellat
     });
 }
 
-export async function cfGetServices(query?: IServiceQuery, cancelationToken?: CancellationToken): Promise<ServiceInfo[]> {
-    return execTotal({ query: `/v2/services?${composeQuery(query)}`, token: cancelationToken }, (service: any) => {
+function getServices(url: string, query: IServiceQuery, cancellationToken: CancellationToken): PromiseLike<ServiceInfo[]> {
+    return execTotal({ query: `${url}?${composeQuery(query)}`, token: cancellationToken }, (service: any) => {
         return Promise.resolve({
             label: getLabel(service),
             service_plans_url: _.get(service, "entity.service_plans_url"),
@@ -317,6 +317,17 @@ export async function cfGetServices(query?: IServiceQuery, cancelationToken?: Ca
             description: getDescription(service)
         });
     });
+}
+
+export async function cfGetSpaceServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
+    // https://apidocs.cloudfoundry.org/200/spaces/list_all_services_for_the_space.html
+    const spaceGUID = (await padQuerySpace({})).filters[0].value;
+    const url = `/v2/spaces/${spaceGUID}/services`;
+    return getServices(url, query, cancellationToken);
+}
+
+export async function cfGetServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {    
+    return getServices("/v2/services", query, cancellationToken);
 }
 
 export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
