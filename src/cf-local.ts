@@ -319,11 +319,21 @@ function getServices(url: string, query: IServiceQuery, cancellationToken: Cance
     });
 }
 
-export async function cfGetSpaceServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
-    const spaceGUID = _.get(_.find((await padQuerySpace(query)).filters, ['key', eFilters.space_guid]), 'value');
-    if (query?.filters) {
-        query.filters = _.reject(query.filters, ['key', eFilters.space_guid]);
+
+/**
+ * Returns the space services
+ * @param spaceGUID - Specific space. Undefined for the current space services. 
+ * @param query - Filter list 
+ * @param cancellationToken - Token for canceling the operation
+ */
+export async function cfGetSpaceServices(spaceGUID?: string, query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
+    if (!spaceGUID){        
+        // Use filter functionality and exceptions to get the current space GUID. 
+        // NOTE: spaceGUID is not a filter in this API
+        // We can access [0] because it is the only filter returned
+        spaceGUID = (await padQuerySpace({})).filters[0].value;
     }
+    
     return getServices(`/v2/spaces/${spaceGUID}/services`, query, cancellationToken);
 }
 

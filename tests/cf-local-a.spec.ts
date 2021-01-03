@@ -204,6 +204,18 @@ describe("cf-local-a unit tests", () => {
             exitCode: 0,
             error: ""
         };
+        const stdOutOneService = `{
+            "resources": [{
+                "entity": {
+                    "service_plans_url": "service_plans_url_1",
+                    "label": "label_1",
+                    "description": "description_1"
+                },
+                "metadata": {
+                    "guid": 1
+                }
+            }]
+        }`;
 
         it("exitCode is not 0", async () => {
             cliResult.error = "some error";
@@ -228,18 +240,7 @@ describe("cf-local-a unit tests", () => {
         });
 
         it("exitCode is 0, but there are services", async () => {
-            cliResult.stdout = `{
-                "resources": [{
-                    "entity": {
-                        "service_plans_url": "service_plans_url_1",
-                        "label": "label_1",
-                        "description": "description_1"
-                    },
-                    "metadata": {
-                        "guid": 1
-                    }
-                }]
-            }`;
+            cliResult.stdout = stdOutOneService;
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
@@ -248,25 +249,14 @@ describe("cf-local-a unit tests", () => {
         });
 
         it("request services from specified space, there are services", async () => {
-            cliResult.stdout = `{
-                "resources": [{
-                    "entity": {
-                        "service_plans_url": "service_plans_url_1",
-                        "label": "label_1",
-                        "description": "description_1"
-                    },
-                    "metadata": {
-                        "guid": 1
-                    }
-                }]
-            }`;
+            cliResult.stdout = stdOutOneService;
             const spaceGUID = "specifiedSpaceGUID";
             const CF_PAGE_SIZE = 13;
             const serviceLabel = 'serviceLabel';
             const localTestArgs = ["curl", `/v2/spaces/${spaceGUID}/services?q=label:${serviceLabel}&results-per-page=${CF_PAGE_SIZE}`];
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(localTestArgs, undefined, undefined).resolves(cliResult);
-            const services = await cfLocal.cfGetSpaceServices({ filters: [{ key: eFilters.space_guid, value: spaceGUID }, { key: eFilters.label, value: serviceLabel }], 'results-per-page': CF_PAGE_SIZE });
+            const services = await cfLocal.cfGetSpaceServices(spaceGUID, { filters: [{ key: eFilters.label, value: serviceLabel }], 'results-per-page': CF_PAGE_SIZE });
             expect(services).to.have.lengthOf(1);
         });
     });
