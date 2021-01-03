@@ -245,12 +245,12 @@ export async function cfGetServiceInstances(query?: IServiceQuery, token?: Cance
         return Promise.resolve({ "label": getName(info), "serviceName": promise, plan_guid: _.get(info, "entity.service_plan_guid"), tags: getTags(info), credentials: getCredentials(info) });
     });
 
-    if(!_.size(serviceNames)) { // sapjira issue DEVXBUGS-7773
+    if (!_.size(serviceNames)) { // sapjira issue DEVXBUGS-7773
         return [];
     }
-   
+
     return Promise.race(serviceNames).then(async () => {
-        const instances: ServiceInstanceInfo[] = [];        
+        const instances: ServiceInstanceInfo[] = [];
         for (const instance of collection) {
             let serviceName: string;
             try {
@@ -308,8 +308,8 @@ export async function cfGetUpsInstances(query?: IServiceQuery, token?: Cancellat
     });
 }
 
-export async function cfGetServices(query?: IServiceQuery, cancelationToken?: CancellationToken): Promise<ServiceInfo[]> {
-    return execTotal({ query: `/v2/services?${composeQuery(query)}`, token: cancelationToken }, (service: any) => {
+function getServices(url: string, query: IServiceQuery, cancellationToken: CancellationToken): PromiseLike<ServiceInfo[]> {
+    return execTotal({ query: `${url}?${composeQuery(query)}`, token: cancellationToken }, (service: any) => {
         return Promise.resolve({
             label: getLabel(service),
             service_plans_url: _.get(service, "entity.service_plans_url"),
@@ -317,6 +317,25 @@ export async function cfGetServices(query?: IServiceQuery, cancelationToken?: Ca
             description: getDescription(service)
         });
     });
+}
+
+/**
+ * Returns the space services
+ * @param query - Filter list 
+ * @param spaceGUID - Specific space. Undefined for the current space services. 
+ * @param cancellationToken - Token for canceling the operation
+ */
+export async function cfGetSpaceServices(query?: IServiceQuery, spaceGUID?: string, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
+    // Use filter functionality and exceptions to get the current space GUID. 
+    // NOTE: spaceGUID is not a filter in this API
+    // We can access [0] because it is the only filter returned
+    spaceGUID = spaceGUID || (await padQuerySpace({})).filters[0].value;
+
+    return getServices(`/v2/spaces/${spaceGUID}/services`, query, cancellationToken);
+}
+
+export async function cfGetServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
+    return getServices("/v2/services", query, cancellationToken);
 }
 
 export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
