@@ -1,7 +1,7 @@
 {
 	"name": "@sap/cf-tools",
 	"displayName": "cf-tools",
-	"version": "0.7.0",
+	"version": "0.8.0",
 	"description": "Cloud Foundry API tools",
 	"bugs": {
 		"url": "https://github.com/sap-staging/cloud-foundry-tools-api.git/issues"
