@@ -245,12 +245,12 @@ export async function cfGetServiceInstances(query?: IServiceQuery, token?: Cance
         return Promise.resolve({ "label": getName(info), "serviceName": promise, plan_guid: _.get(info, "entity.service_plan_guid"), tags: getTags(info), credentials: getCredentials(info) });
     });
 
-    if(!_.size(serviceNames)) { // sapjira issue DEVXBUGS-7773
+    if (!_.size(serviceNames)) { // sapjira issue DEVXBUGS-7773
         return [];
     }
-   
+
     return Promise.race(serviceNames).then(async () => {
-        const instances: ServiceInstanceInfo[] = [];        
+        const instances: ServiceInstanceInfo[] = [];
         for (const instance of collection) {
             let serviceName: string;
             try {
@@ -320,13 +320,14 @@ function getServices(url: string, query: IServiceQuery, cancellationToken: Cance
 }
 
 export async function cfGetSpaceServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
-    // https://apidocs.cloudfoundry.org/200/spaces/list_all_services_for_the_space.html
-    const spaceGUID = (await padQuerySpace({})).filters[0].value;
-    const url = `/v2/spaces/${spaceGUID}/services`;
-    return getServices(url, query, cancellationToken);
+    const spaceGUID = _.get(_.find((await padQuerySpace(query)).filters, ['key', eFilters.space_guid]), 'value');
+    if (query?.filters) {
+        query.filters = _.reject(query.filters, ['key', eFilters.space_guid]);
+    }
+    return getServices(`/v2/spaces/${spaceGUID}/services`, query, cancellationToken);
 }
 
-export async function cfGetServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {    
+export async function cfGetServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
     return getServices("/v2/services", query, cancellationToken);
 }
 

@@ -208,7 +208,7 @@ describe("cf-local-a unit tests", () => {
         it("exitCode is not 0", async () => {
             cliResult.error = "some error";
             cliResult.exitCode = 1;
-            cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);            
+            cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             try {
                 await cfLocal.cfGetSpaceServices();
@@ -244,6 +244,29 @@ describe("cf-local-a unit tests", () => {
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             const services = await cfLocal.cfGetSpaceServices();
+            expect(services).to.have.lengthOf(1);
+        });
+
+        it("request services from specified space, there are services", async () => {
+            cliResult.stdout = `{
+                "resources": [{
+                    "entity": {
+                        "service_plans_url": "service_plans_url_1",
+                        "label": "label_1",
+                        "description": "description_1"
+                    },
+                    "metadata": {
+                        "guid": 1
+                    }
+                }]
+            }`;
+            const spaceGUID = "specifiedSpaceGUID";
+            const CF_PAGE_SIZE = 13;
+            const serviceLabel = 'serviceLabel';
+            const localTestArgs = ["curl", `/v2/spaces/${spaceGUID}/services?q=label:${serviceLabel}&results-per-page=${CF_PAGE_SIZE}`];
+            cliResult.exitCode = 0;
+            cliMock.expects("execute").withExactArgs(localTestArgs, undefined, undefined).resolves(cliResult);
+            const services = await cfLocal.cfGetSpaceServices({ filters: [{ key: eFilters.space_guid, value: spaceGUID }, { key: eFilters.label, value: serviceLabel }], 'results-per-page': CF_PAGE_SIZE });
             expect(services).to.have.lengthOf(1);
         });
     });
