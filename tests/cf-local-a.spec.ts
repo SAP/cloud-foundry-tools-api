@@ -256,7 +256,7 @@ describe("cf-local-a unit tests", () => {
             const localTestArgs = ["curl", `/v2/spaces/${spaceGUID}/services?q=label:${serviceLabel}&results-per-page=${CF_PAGE_SIZE}`];
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(localTestArgs, undefined, undefined).resolves(cliResult);
-            const services = await cfLocal.cfGetSpaceServices(spaceGUID, { filters: [{ key: eFilters.label, value: serviceLabel }], 'results-per-page': CF_PAGE_SIZE });
+            const services = await cfLocal.cfGetSpaceServices({ filters: [{ key: eFilters.label, value: serviceLabel }], 'results-per-page': CF_PAGE_SIZE }, spaceGUID);
             expect(services).to.have.lengthOf(1);
         });
     });
