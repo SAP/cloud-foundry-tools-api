@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company <alexander.gilin@sap.com>
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { SpawnOptions, spawn } from 'child_process';
 import { parse } from "comment-json";
 import * as _ from "lodash";
@@ -55,6 +49,7 @@ export class Cli {
     private static readonly CF_CMD = "cf";
 
     private static cliResultOnExit(stdout: string, resolve: (value?: CliResult | PromiseLike<CliResult>) => void, stderr: string, code: number) {
+        const getValueExceptEol = (value: string) => value === '\n' ? '' : value;
         if (stdout) {
             if (stdout.indexOf("error_code") > 0) {
                 try {
@@ -81,7 +76,7 @@ export class Cli {
                 return;
             }
         }
-        resolve({ "stdout": stdout, "stderr": stderr, exitCode: code });
+        resolve({ "stdout": getValueExceptEol(stdout), "stderr": stderr, exitCode: code });
     }
 
     private static updateSpawnOptions(options: SpawnOptions) {
