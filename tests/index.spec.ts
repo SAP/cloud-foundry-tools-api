@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company <alexander.gilin@sap.com>
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { expect, assert } from 'chai';
 import * as index from '../src/index';
 import * as serviceUtils from "../src/cfServicesUtil";
@@ -35,26 +29,14 @@ describe("index package test", () => {
         expect(index.OK).to.be.equal('OK');
     });
 
-    it("cli", () => {
-        expect(index.Cli).to.be.not.undefined;
-    });
-
-    it("messages", () => {
-        expect(index.messages).to.be.not.undefined;
-    });
-
-    it("cf-SDK", () => {
-        expect(index.cfLogin).to.be.not.undefined;
-    });
-
-    it("apiGetServicesInstancesFilteredByType", async () => {
+    it("apiGetServicesInstancesFilteredByType:: verify calling the 'getServicesInstancesFilteredByType'", async () => {
         const serviceTypes = ['type1', 'type2'];
         const services = [{ label: 's1', serviceName: `${serviceTypes[0]}` }, { label: 's2', serviceName: `${serviceTypes[1]}` }];
         mockServiceUtils.expects("getServicesInstancesFilteredByType").withExactArgs(serviceTypes).resolves(services);
         assert.deepEqual(await index.apiGetServicesInstancesFilteredByType(serviceTypes), services);
     });
 
-    it("apiGetInstanceCredentials", async () => {
+    it("apiGetInstanceCredentials:: verify calling the 'getInstanceCredentials'", async () => {
         const name = "myInstance";
         const serviceKey = {
             binding: {
@@ -88,7 +70,7 @@ describe("index package test", () => {
         assert.deepEqual(await index.apiGetInstanceCredentials(name), serviceKey);
     });
 
-    it("apiCreateServiceInstance", async () => {
+    it("apiCreateServiceInstance:: verify calling the 'createServiceInstance'", async () => {
         const serviceType = 'type1';
         const servicePlan = "plan";
         const instanceName = "name";
@@ -98,7 +80,7 @@ describe("index package test", () => {
         assert.deepEqual(await index.apiCreateServiceInstance(serviceType, servicePlan, instanceName, config), result);
     });
 
-    it("apiCreateServiceInstance", async () => {
+    it("apiCreateServiceInstance:: verify calling the 'getInstanceMetadata'", async () => {
         const instanceName = "name";
         const result = {data : {}};
         mockServiceUtils.expects("getInstanceMetadata").withExactArgs(instanceName).resolves(result);

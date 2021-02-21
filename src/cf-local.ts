@@ -1,53 +1,69 @@
-/*
- * SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company <alexander.gilin@sap.com>
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import * as fsextra from "fs-extra";
-import * as os from 'os';
-import * as path from 'path';
 import { parse, stringify } from "comment-json";
 import * as _ from "lodash";
 import { Cli } from "./cli";
 import { messages } from "./messages";
 import {
     ProgressHandler, CliResult, CFResource, CancellationToken, CFTarget, ServiceInstanceInfo, ServiceInfo, PlanInfo,
-    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget, UpsTypeInfo
+    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget, UpsTypeInfo, eServiceTypes
 } from './types';
-import { ensureQuery } from "./utils";
+import { ensureQuery, getDescription, getGuid, getLabel, getName, getOrgGUID, getSpaceGuidThrowIfUndefined, getTags, padQuery, padQuerySpace } from "./utils";
 import { SpawnOptions } from "child_process";
 
-function getGuid(resource: any): string {
-    return _.get(resource, "metadata.guid", '');
+const baseParams = [
+    eFilters.page, eFilters.per_page, eFilters.oder_by, eFilters.label_selector, eFilters.created_ats, eFilters.updated_ats
+];
+
+interface ResourceFilters {
+    name: string;
+    params: string[];
 }
 
-function getName(resource: any): string {
-    return _.get(resource, "entity.name", '');
-}
+const resourceServiceInstances: ResourceFilters = {
+    name: "service_instances",
+    params: _.uniq(_.concat(baseParams, [
+        eFilters.names, eFilters.type, eFilters.space_guids, eFilters.organization_guids, eFilters.service_plan_guids,
+        eFilters.service_plan, eFilters.service_plan_names
+    ]))
+};
 
-function getLabel(resource: any): string {
-    return _.get(resource, "entity.label", '');
-}
+const resourceOrganizations: ResourceFilters = {
+    name: "organizations",
+    params: _.uniq(_.concat(baseParams, [eFilters.names, eFilters.guids]))
+};
 
-function getDescription(resource: any): string {
-    return _.get(resource, "entity.description", '');
-}
+const resourceSpaces: ResourceFilters = {
+    name: "spaces",
+    params: _.uniq(_.concat(baseParams, [eFilters.names, eFilters.guids, eFilters.organization_guids, eFilters.include]))
+};
 
-function getSpaceFieldGUID(spaceField: any): string {
-    return _.get(spaceField, "GUID", '');
-}
+const resourceServicePlan: ResourceFilters = {
+    name: "service_plan",
+    params: _.uniq(_.concat(baseParams, [eFilters.names, eFilters.guids, eFilters.available, eFilters.broker_catalog_ids, eFilters.space_guids,
+    eFilters.organization_guids, eFilters.service_broker_guids, eFilters.service_broker_names, eFilters.service_offering_guids,
+    eFilters.service_offering_names, eFilters.service_instance_guids, eFilters.include
+    ]))
+};
 
-function getOrgGUID(resource: any): string {
-    return _.get(resource, "entity.organization_guid", '');
-}
+const resourceServiceOfferings: ResourceFilters = {
+    name: "service_offerings",
+    params: _.uniq(_.concat(baseParams, [eFilters.names, eFilters.available, eFilters.service_broker_guids,
+    eFilters.service_broker_names, eFilters.space_guids, eFilters.organization_guids
+    ]))
+};
 
-function getTags(resource: any): string[] {
-    return _.get(resource, "entity.tags", []);
-}
+const resourceServiceCredentialsBinding: ResourceFilters = {
+    name: "service_credential_bindings",
+    params: _.uniq(_.concat(baseParams, [eFilters.names, eFilters.guids, eFilters.include, eFilters.service_instance_guids,
+    eFilters.broker_catalog_ids, eFilters.space_guids, eFilters.service_instance_names, eFilters.app_guids, eFilters.app_names,
+    eFilters.service_plan_names, eFilters.service_offering_guids, eFilters.service_offering_names, eFilters.type
+    ]))
+};
 
-function getCredentials(resource: any): any {
-    return _.get(resource, "entity.credentials", {});
+function evaluateResponse(data: any) {
+    if (_.size(data.errors)) {
+        throw new Error(`${data.errors[0].detail} [code: ${data.errors[0].code} title: ${data.errors[0].title}]`);
+    }
+    return data;
 }
 
 let cacheServiceInstanceTypes: any = {};
@@ -55,30 +71,12 @@ export function clearCacheServiceInstances() {
     cacheServiceInstanceTypes = {};
 }
 
-export function cfGetConfigFilePath(): string {
-    return path.join(_.get(process, "env.CF_HOME", os.homedir()), ".cf", "config.json");
-}
-
-export async function cfGetConfigFileField(field: string): Promise<any> {
-    try {
-        const configJson = parse(await fsextra.readFile(cfGetConfigFilePath(), "utf8"));
-        return _.get(configJson, `${field}`);
-    } catch (error) {
-        // empty or non existing file
-    }
-}
-
-async function padQuerySpace(query: IServiceQuery): Promise<IServiceQuery> {
-    query = ensureQuery(query);
-    const filter = _.find(query.filters, ['key', eFilters.space_guid]);
-    if (!_.get(filter, 'value')) {
-        const space: string = getSpaceFieldGUID(await cfGetConfigFileField("SpaceFields"));
-        if (!space) {
-            throw new Error(messages.cf_setting_not_set);
+function evaluateQueryFilters(query: IServiceQuery, resource: ResourceFilters) {
+    _.each(query?.filters, filter => {
+        if (!resource.params.includes(filter.key)) {
+            throw new Error(messages.not_allowed_filter(filter.key, resource.name));
         }
-        query.filters = _.concat(query.filters, [{ key: eFilters.space_guid, value: space }]);
-    }
-    return query;
+    });
 }
 
 const ENTITY_STATE_INPROGRESS = "in progress";
@@ -86,13 +84,16 @@ const ENTITY_STATE_FAILED = "failed";
 
 function composeQuery(query: IServiceQuery): string {
     query = ensureQuery(query);
+    function _generate_statement(filter: IServiceFilters): string {
+        const value = _.get(filter, 'value');
+        if (value) {
+            return (filter.op === eOperation.fields)
+                ? `${filter.op}[${filter.key}]=${value}`
+                : `${filter.key}` + (filter.op ? `[${filter.op}]` : ``) + `=${value}`;
+        }
+    }
     function _queryFilters(filters: IServiceFilters[]): string[] {
-        return _.compact(_.values(_.map(filters, filter => {
-            const value = _.get(filter, 'value');
-            if (value) {
-                return `q=${filter.key}${filter.op || eOperation.eq}${value}`;
-            }
-        })));
+        return _.compact(_.values(_.map(filters, _generate_statement)));
     }
     function _queryParams(object: any): string[] {
         return _.compact(_.map(_.keys(object), key => {
@@ -102,8 +103,7 @@ function composeQuery(query: IServiceQuery): string {
             }
         }));
     }
-    // a semicolon (;) serves as an "AND" operator between two query predicates in the value of the "q" query parameter
-    return _.compact(_.concat(_queryFilters(query.filters).join(';'), _queryParams(_.omit(query, 'filters')))).join('&');
+    return _.compact(_.concat(_queryFilters(query.filters).join('&'), _queryParams(_.omit(query, 'filters')))).join('&');
 }
 
 function waitForEntity(
@@ -115,11 +115,18 @@ function waitForEntity(
     jobFunction: () => Promise<CFResource>,
     progress: ProgressHandler
 ) {
+    if (_.size(_.get(resource, 'errors'))) {
+        reject(new Error(messages.service_creation_failed(_.get(resource, ['errors', '0', 'detail']))));
+        return;
+    }
+
     if (attempt < maxNumberOfAttemps) {
         if (progress.cancelToken.isCancellationRequested) {
             reject(new Error(messages.create_service_canceled_by_requester));
+            return;
         }
-        const state = _.get(resource, "entity.last_operation.state");
+
+        const state = _.get(resource, "last_operation.state", ENTITY_STATE_INPROGRESS);
         if (state === ENTITY_STATE_INPROGRESS) {
             progress.progress.report({ "message": `\n${messages.service_creation_started}`, increment: Math.floor(1 / maxNumberOfAttemps * 100) });
             setTimeout(() => {
@@ -130,13 +137,13 @@ function waitForEntity(
                 });
             }, 2000);
         } else if (state === ENTITY_STATE_FAILED) {
-            reject(new Error(messages.failed_creating_entity(_.get(resource, "entity.last_operation.description"), getName(resource))));
+            reject(new Error(messages.failed_creating_entity(_.get(resource, "last_operation.description"), getName(resource))));
         } else {
             progress.progress.report({ "message": `\n${messages.service_creation_started}`, increment: 100 });
             resolve(resource);
         }
     } else {
-        resolve(messages.exceed_number_of_attempts(getName(resource)));
+        reject(new Error(messages.exceed_number_of_attempts(getName(resource))));
     }
 }
 
@@ -148,32 +155,20 @@ async function execQuery(args: { query: string[]; options?: SpawnOptions; token?
             (cliResult.error || cliResult.stderr || cliResult.stdout)
         );
     }
-    return fncParse ? await fncParse(parse(cliResult.stdout)) : cliResult.stdout || cliResult.stderr;
+    return fncParse ? await fncParse(evaluateResponse(parse(cliResult.stdout))) : cliResult.stdout || cliResult.stderr;
 }
 
-async function execTotal(args: { query: string; options?: SpawnOptions; token?: CancellationToken }, fncParse?: (arg: any) => Promise<any>): Promise<any[]> {
+async function execTotal(args: { query: string; options?: SpawnOptions; token?: CancellationToken }, fncParse?: (resource: any, included: any) => Promise<any>): Promise<any> {
     const collection: any = [];
     let query = args.query;
     while (query) {
         const result = parse(await execQuery({ query: ["curl", query], options: args.options, token: args.token }));
         for (const resource of _.get(result, "resources", [])) {
-            collection.push(fncParse ? await fncParse(resource) : resource);
+            collection.push(fncParse ? await fncParse(resource, _.get(result, "included")) : resource);
         }
-        query = result.next_url;
+        query = _.get(result, ['pagination', 'next', 'href']);
     }
     return _.compact(collection);
-}
-
-function getCachedServiceInstanceLabel(service: any): Promise<string> {
-    if (_.get(service, ['entity', 'service_url'])) {
-        if (!cacheServiceInstanceTypes[service.entity.service_url]) {
-            cacheServiceInstanceTypes[service.entity.service_url] = execQuery({ query: ["curl", service.entity.service_url] }, (data) => {
-                return Promise.resolve(getLabel(data));
-            }, true);
-        }
-        return cacheServiceInstanceTypes[service.entity.service_url];
-    }
-    return Promise.resolve('unknown');
 }
 
 /**
@@ -182,32 +177,91 @@ function getCachedServiceInstanceLabel(service: any): Promise<string> {
  * @param token 
  */
 async function getServiceInstance(query: IServiceQuery, token?: CancellationToken): Promise<CFResource> {
-    const result = await execQuery({ query: ["curl", `/v2/service_instances?${composeQuery(query)}`], token }, (data: any) => data);
-    if (_.size(_.get(result, 'resources')) === 1) {
-        return _.head(result.resources);
+    evaluateQueryFilters(query, resourceServiceInstances);
+    query = await padQuerySpace(query, [{ key: eFilters.type, value: eServiceTypes.managed }]);
+    const result = await execTotal({ query: `/v3/service_instances?${composeQuery(query)}`, token });
+    if (_.size(result) >= 1) {
+        return _.head(result);
     }
-    throw new Error(messages.service_not_found(decodeURIComponent(_.get(_.find(query.filters, ['key', eFilters.name]), 'value')) || 'unknown'));
+    throw new Error(messages.service_not_found(decodeURIComponent(_.get(_.find(query.filters, ['key', eFilters.names]), 'value')) || 'unknown'));
+}
+
+async function getUpsCredentials(instanceGuid: string, token?: CancellationToken): Promise<any[]> {
+    return execQuery({ query: ['curl', `v3/service_instances/${instanceGuid}/credentials`], token }, (data: any) => data);
+}
+
+/**
+ * Returning User-provided-services instances
+ * 
+ * @param query: IServiceQuery (optional)
+ * @param token : CancellationToken (optional)
+ */
+export async function cfGetUpsInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
+    evaluateQueryFilters(query, resourceServiceInstances);
+    query = await padQuerySpace(query, [{ key: eFilters.type, value: eServiceTypes.user_provided }]);
+    const results = await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, async (info: any): Promise<ServiceInstanceInfo> => {
+        return Promise.resolve({
+            label: getName(info),
+            serviceName: eServiceTypes.user_provided,
+            tags: getTags(info),
+            credentials: getUpsCredentials(getGuid(info)).then(data => data).catch(() => { return {}; })
+        });
+    });
+    const queries = _.map(results, 'credentials');
+    if (!_.size(queries)) {
+        return [];
+    }
+    return Promise.all(queries).then(async () => {
+        for (const instance of results) {
+            instance.credentials = await instance.credentials;
+        }
+        return _.compact(results);
+    });
 }
 
 export async function cfCreateService(
     planGuid: string, instanceName: string, params: any, tags: string[], progress?: ProgressHandler, maxNumberOfAttemps?: number
 ): Promise<CFResource> {
-    const spaceGuid: string = getSpaceFieldGUID(await cfGetConfigFileField("SpaceFields"));
-    if (!spaceGuid) {
-        throw new Error(messages.space_not_set);
-    }
-
+    const spaceGuid: string = await getSpaceGuidThrowIfUndefined();
     maxNumberOfAttemps = _.isNil(maxNumberOfAttemps) ? 45 : maxNumberOfAttemps;
     progress = _.defaults(progress, { progress: { report: () => '' } }, { cancelToken: { isCancellationRequested: false, onCancellationRequested: () => '' } });
-    const request = { name: instanceName, space_guid: spaceGuid, service_plan_guid: planGuid, parameters: params, tags };
-    const result = await execQuery({ query: ["curl", "/v2/service_instances?accepts_incomplete=true", "-d", stringify(request), "-X", "POST"], token: progress.cancelToken });
+    const request = {
+        type: eServiceTypes.managed,
+        name: instanceName,
+        relationships: {
+            space: { data: { guid: spaceGuid } },
+            service_plan: { data: { guid: planGuid } }
+        },
+        parameters: params, tags
+    };
+    const result = await execQuery({ query: ["curl", "/v3/service_instances", "-d", stringify(request), "-X", "POST"], token: progress.cancelToken });
 
     progress.progress.report({ "message": `\n${messages.service_creation_started}`, increment: 1 });
 
-    const query = { filters: [{ key: eFilters.name, value: encodeURIComponent(instanceName) }, { key: eFilters.space_guid, value: spaceGuid }] };
+    const query = { filters: [{ key: eFilters.names, value: encodeURIComponent(instanceName) }, { key: eFilters.space_guids, value: spaceGuid }] };
     return new Promise<CFResource>((resolve, reject) => {
-        waitForEntity(resolve, reject, parse(result), 0, maxNumberOfAttemps, () => getServiceInstance(query, progress.cancelToken), progress);
+        waitForEntity(resolve, reject, result ? parse(result) : result, 0, maxNumberOfAttemps, () => getServiceInstance(query, progress.cancelToken), progress);
     });
+}
+
+export async function cfCreateUpsInstance(info: UpsTypeInfo): Promise<CFResource> {
+    let spaceGuid: string = info.space_guid;
+    if (!spaceGuid) {
+        spaceGuid = await getSpaceGuidThrowIfUndefined();
+    }
+    return evaluateResponse(parse(await execQuery({
+        query: ["curl", `/v3/service_instances`, '-d', stringify(
+            _.merge({
+                name: info.instanceName,
+                type: eServiceTypes.user_provided,
+                relationships: { space: { data: { guid: spaceGuid } } }
+            },
+                info.credentials ? { "credentials": info.credentials } : {},
+                info.route_service_url ? { "route_service_url": info.route_service_url } : {},
+                info.syslog_drain_url ? { "syslog_drain_url": info.syslog_drain_url } : {},
+                info.tags ? { "tags": info.tags } : {}
+            )), "-X", "POST"]
+    })));
 }
 
 export async function cfLogin(endpoint: string, user: string, pwd: string): Promise<string> {
@@ -221,14 +275,19 @@ export async function cfLogin(endpoint: string, user: string, pwd: string): Prom
 }
 
 export async function cfGetAvailableOrgs(query?: IServiceQuery): Promise<any[]> {
-    const params = composeQuery(query);
-    return execTotal({ query: "/v2/organizations" + (params ? `?${params}` : "") }, (data: any) => {
-        return Promise.resolve({ label: getName(data), guid: getGuid(data) });
+    evaluateQueryFilters(query, resourceOrganizations);
+    return execTotal({ query: `/v3/organizations?${composeQuery(query)}` }, (resource: any) => {
+        return Promise.resolve({ label: getName(resource), guid: getGuid(resource) });
     });
 }
 
 export async function cfGetAvailableSpaces(orgGuid?: string): Promise<any[]> {
-    return execTotal({ query: orgGuid ? `/v2/organizations/${orgGuid}/spaces` : "/v2/spaces" }, (resource: any) => {
+    const query = ensureQuery();
+    if (orgGuid) {
+        _.merge(query.filters, [{ key: eFilters.organization_guids, value: orgGuid }]);
+    }
+    evaluateQueryFilters(query, resourceSpaces);
+    return execTotal({ query: `/v3/spaces?${composeQuery(query)}` }, (resource: any) => {
         return Promise.resolve({
             label: getName(resource),
             guid: getGuid(resource),
@@ -237,31 +296,80 @@ export async function cfGetAvailableSpaces(orgGuid?: string): Promise<any[]> {
     });
 }
 
+function resolvePlanInfo(data: CFResource, service: CFResource) {
+    return _.merge({
+        label: getName(data),
+        guid: getGuid(data),
+        description: getDescription(data)
+    }, service ? {
+        service_offering: {
+            guid: getGuid(service),
+            description: getDescription(service),
+            name: getName(service)
+        }
+    } : {});
+}
+
+export async function cfGetServicePlansList(query?: IServiceQuery, token?: CancellationToken): Promise<PlanInfo[]> {
+    query = await padQuerySpace(query, [{ key: eFilters.include, value: 'service_offering' }]);
+    evaluateQueryFilters(query, resourceServicePlan);
+    return execTotal({ query: `/v3/service_plans?${composeQuery(query)}`, token }, (data: any, included: any) => {
+        return Promise.resolve(resolvePlanInfo(data, _.find(_.get(included, 'service_offerings'), ['guid', _.get(data, ['relationships', 'service_offering', 'data', 'guid'])])));
+    });
+}
+
+function resolveCfResource(data: CFResource, service: CFResource) {
+    return _.merge({
+        name: getName(data),
+        guid: getGuid(data),
+        description: getDescription(data)
+    }, service ? {
+        service_offering: {
+            guid: getGuid(service),
+            description: getDescription(service),
+            name: getName(service)
+        }
+    } : {});
+}
+
+function getCachedServicePlan(plan: any): Promise<CFResource> {
+    if (!cacheServiceInstanceTypes[plan.guid]) {
+        cacheServiceInstanceTypes[plan.guid] = execQuery({ query: ['curl', `/v3/service_plans/${plan.guid}?include=service_offering`] }, (data: any) => {
+            return Promise.resolve(resolveCfResource(data, _.find(_.get(data, ['included', 'service_offerings']), ['guid', _.get(data, ['relationships', 'service_offering', 'data', 'guid'])])));
+        });
+    }
+    return cacheServiceInstanceTypes[plan.guid];
+}
+
 export async function cfGetServiceInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
-    const serviceNames: Promise<string>[] = [];
-    const collection = await execTotal({ query: `v2/service_instances?${composeQuery(await padQuerySpace(query))}`, token }, (info: any): Promise<unknown> => {
-        const promise = getCachedServiceInstanceLabel(info);
-        serviceNames.push(promise);
-        return Promise.resolve({ "label": getName(info), "serviceName": promise, plan_guid: _.get(info, "entity.service_plan_guid"), tags: getTags(info), credentials: getCredentials(info) });
+    query = await padQuerySpace(query, [
+        { key: eFilters.service_plan, value: 'guid,name', op: eOperation.fields },
+        { key: eFilters.type, value: eServiceTypes.managed }
+    ]);
+    evaluateQueryFilters(query, resourceServiceInstances);
+    const results = await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => {
+        const planGuid = _.get(info, ['relationships', 'service_plan', 'data', 'guid']);
+        return Promise.resolve({
+            label: getName(info),
+            serviceName: getCachedServicePlan({ guid: planGuid }).then(plan => plan).catch(() => { return {}; }),
+            plan_guid: planGuid,
+            tags: getTags(info)
+        });
     });
 
-    if (!_.size(serviceNames)) { // sapjira issue DEVXBUGS-7773
+    const plans = _.map(results, 'serviceName');
+    if (!_.size(plans)) { // sapjira issue DEVXBUGS-7773
         return [];
     }
-
-    return Promise.race(serviceNames).then(async () => {
+    return Promise.race(plans).then(async () => {
         const instances: ServiceInstanceInfo[] = [];
-        for (const instance of collection) {
-            let serviceName: string;
-            try {
-                serviceName = await _.get(instance, 'serviceName');
-            } catch (e) {
-                serviceName = 'unknown';
-            }
+        for (const instance of results) {
+            const plan = await _.get(instance, 'serviceName');
             instances.push({
-                label: _.get(instance, 'label'),
-                serviceName: serviceName,
+                label: getLabel(instance),
+                serviceName: _.get(plan, ['service_offering', 'name'], 'unknown'),
                 plan_guid: _.get(instance, 'plan_guid'),
+                plan: _.get(plan, 'name', 'unknown'),
                 tags: _.get(instance, 'tags'),
                 credentials: _.get(instance, 'credentials')
             });
@@ -296,23 +404,12 @@ export async function cfGetTargets(): Promise<CFTarget[]> {
     });
 }
 
-/**
- * Returning User-provided-services instances
- * 
- * @param query: IServiceQuery (optional)
- * @param token : CancellationToken (optional)
- */
-export async function cfGetUpsInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
-    return execTotal({ query: `v2/user_provided_service_instances?${composeQuery(await padQuerySpace(query))}`, token }, (info: any): Promise<ServiceInstanceInfo> => {
-        return Promise.resolve({ label: getName(info), serviceName: _.get(info, "entity.type"), tags: getTags(info), credentials: getCredentials(info) });
-    });
-}
-
-function getServices(url: string, query: IServiceQuery, cancellationToken: CancellationToken): PromiseLike<ServiceInfo[]> {
-    return execTotal({ query: `${url}?${composeQuery(query)}`, token: cancellationToken }, (service: any) => {
+export async function cfGetServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
+    evaluateQueryFilters(query, resourceServiceOfferings);
+    return execTotal({ query: `/v3/service_offerings?${composeQuery(query)}`, token: cancellationToken }, (service: any) => {
         return Promise.resolve({
-            label: getLabel(service),
-            service_plans_url: _.get(service, "entity.service_plans_url"),
+            label: getName(service),
+            service_plans_url: _.get(service, ['links', 'service_plans', 'href']),
             guid: getGuid(service),
             description: getDescription(service)
         });
@@ -320,6 +417,7 @@ function getServices(url: string, query: IServiceQuery, cancellationToken: Cance
 }
 
 /**
+ * @deprecated backward compatibilty - > space guid is allowed filter for cfGetServices api
  * Returns the space services
  * @param query - Filter list 
  * @param spaceGUID - Specific space. Undefined for the current space services. 
@@ -327,25 +425,13 @@ function getServices(url: string, query: IServiceQuery, cancellationToken: Cance
  */
 export async function cfGetSpaceServices(query?: IServiceQuery, spaceGUID?: string, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
     // Use filter functionality and exceptions to get the current space GUID. 
-    // NOTE: spaceGUID is not a filter in this API
     // We can access [0] because it is the only filter returned
-    spaceGUID = spaceGUID || (await padQuerySpace({})).filters[0].value;
-
-    return getServices(`/v2/spaces/${spaceGUID}/services`, query, cancellationToken);
-}
-
-export async function cfGetServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
-    return getServices("/v2/services", query, cancellationToken);
+    query = padQuery(query, [{ key: eFilters.space_guids, value: spaceGUID }]);
+    return cfGetServices(await padQuerySpace(padQuery(query, [{ key: eFilters.space_guids, value: spaceGUID }])), cancellationToken);
 }
 
 export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
     return execTotal({ query: servicePlansUrl }, (data: any) => {
-        return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
-    });
-}
-
-export async function cfGetServicePlansList(query?: IServiceQuery, token?: CancellationToken): Promise<PlanInfo[]> {
-    return execTotal({ query: `/v2/service_plans?${composeQuery(query)}`, token }, (data: any) => {
         return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
     });
 }
@@ -366,7 +452,7 @@ export async function cfBindLocalServices(filePath: string, instanceNames: strin
             "-path",
             filePath,
             "-service-names",
-            ..._.map(instanceNames, encodeURI),
+            ...instanceNames,
             ...(_.size(tags) ? _.concat(["-tags"], tags) : []),
             ...(_.size(serviceKeyNames) ? _.concat(["-service-keys"], serviceKeyNames) : []),
             ...(_.size(serviceKeyParams) ? _.concat(["-params"], _.map(serviceKeyParams, param => { return stringify(param); })) : [])
@@ -386,7 +472,7 @@ export async function cfBindLocalUps(filePath: string, instanceNames: string[], 
         query: _.concat(
             ["bind-local-ups", "-path", filePath],
             _.reduce(instanceNames, (result, instanceName) => {
-                result = _.concat(result, [`-service-names`, `${encodeURI(instanceName)}`]);
+                result = _.concat(result, [`-service-names`, `${instanceName}`]);
                 return result;
             }, []),
             _.reduce(tags, (result, tag) => {
@@ -397,41 +483,22 @@ export async function cfBindLocalUps(filePath: string, instanceNames: string[], 
     });
 }
 
-/**
- * List all Service Keys
- * @param query 
- * @param token (optional) ability to cancel operaton
- */
-export async function cfGetServiceKeys(query?: IServiceQuery, token?: CancellationToken): Promise<any[]> {
-    if (_.isEmpty(_.intersection([eFilters.name, eFilters.service_instance_guid], _.map(_.get(query, 'filters'), 'key')))) {
-        throw new Error(messages.no_valid_filters);
-    }
-    return execTotal({ query: `v2/service_keys?${composeQuery(query)}`, token });
-}
-
-export async function cfGetInstanceCredentials(query?: IServiceQuery, token?: CancellationToken): Promise<any[]> {
-    return _.compact(_.map(await cfGetServiceKeys(query, token), 'entity.credentials'));
-}
-
 export async function cfGetInstanceMetadata(instanceName: string): Promise<any> {
-    const instance = await getServiceInstance(await padQuerySpace({ filters: [{ key: eFilters.name, value: encodeURIComponent(instanceName) }] }));
-    const plans = await cfGetServicePlansList({
+    const result = await cfGetServiceInstances(await padQuerySpace({
         filters: [
-            { key: eFilters.service_guid, value: _.get(instance, ['entiry', 'service_guid']) },
-            { key: eFilters.service_instance_guid, value: _.get(instance, ['metadata', 'guid']) }
+            { key: eFilters.names, value: encodeURIComponent(instanceName) },
+            { key: eFilters.type, value: eServiceTypes.managed }
         ]
-    });
-    let serviceName: string;
-    try {
-        serviceName = await getCachedServiceInstanceLabel(instance);
-    } catch (e) {
-        serviceName = 'unknown';
+    }));
+    if (!_.size(result)) {
+        throw new Error(messages.service_not_found(instanceName));
     }
+    const serviceInstance = _.head(result);
     return {
-        serviceName: _.get(instance, ['entity', 'name']),
-        plan: _.head(plans).label,
-        plan_guid: _.get(instance, ['entity', 'service_plan_guid']),
-        service: serviceName
+        serviceName: getLabel(serviceInstance),
+        plan: _.get(serviceInstance, 'plan'),
+        plan_guid: _.get(serviceInstance, 'plan_guid'),
+        service: _.get(serviceInstance, 'serviceName')
     };
 }
 
@@ -459,37 +526,27 @@ export async function cfLogout() {
     await execQuery({ query: ["logout"] });
 }
 
-export async function cfCreateUpsInstance(info: UpsTypeInfo): Promise<CFResource> {
-    const data = { "name": info.instanceName };
-    let spaceGuid: string = info.space_guid;
-    if (!spaceGuid) {
-        spaceGuid = getSpaceFieldGUID(await cfGetConfigFileField("SpaceFields"));
-        if (!spaceGuid) {
-            throw new Error(messages.space_not_set);
-        }
-    }
-    _.merge(data,
-        { "space_guid": spaceGuid },
-        info.credentials ? { "credentials": info.credentials } : {},
-        info.route_service_url ? { "route_service_url": info.route_service_url } : {},
-        info.syslog_drain_url ? { "syslog_drain_url": info.syslog_drain_url } : {},
-        info.tags ? { "tags": info.tags } : {}
-    );
-    return parse(await execQuery({ query: ["curl", `/v2/user_provided_service_instances`, '-d', stringify(data), "-X", "POST"] }));
+export async function cfGetServiceKeys(query?: IServiceQuery, token?: CancellationToken): Promise<CFResource[]> {
+    evaluateQueryFilters(query, resourceServiceCredentialsBinding);
+    return execTotal({ query: `/v3/service_credential_bindings?${composeQuery(padQuery(query, [{ key: eFilters.type, value: 'key' }]))}`, token });
+}
+
+export async function cfGetInstanceCredentials(query?: IServiceQuery, token?: CancellationToken): Promise<any[]> {
+    const results: any[] = _.map(await cfGetServiceKeys(query, token), (resource: any) => {
+        return execQuery({ query: ['curl', `/v3/service_credential_bindings/${getGuid(resource)}/details`], token }, (data: any) => data)
+            .then(data => data).catch(() => { return {}; });
+    });
+    return Promise.all(_.compact(results));
 }
 
 export async function cfGetInstanceKeyParameters(instanceName: string): Promise<any | undefined> {
-    let query = { filters: [{ key: eFilters.name, value: encodeURIComponent(instanceName) }] };
-    const collection = await execTotal({ query: `v2/service_instances?${composeQuery(await padQuerySpace(query))}` });
-    if (!_.size(collection)) {
-        return undefined; // service instance not found
-    }
-    query = { filters: [{ key: eFilters.service_instance_guid, value: _.get(collection, ["0", "metadata", "guid"]) }] };
+    const instance = await getServiceInstance({ filters: [{ key: eFilters.names, value: encodeURIComponent(instanceName) }] });
+    const query = { filters: [{ key: eFilters.service_instance_guids, value: getGuid(instance) }] };
     let keys = await cfGetServiceKeys(query);
     if (!_.size(keys)) {
         await Cli.execute(["create-service-key", encodeURIComponent(instanceName), "key"]);
-        query.filters.push({ key: eFilters.name, value: "key" });
-        keys = await cfGetServiceKeys(query);
+        keys = await cfGetServiceKeys(padQuery(query, [{ key: eFilters.names, value: 'key' }]));
     }
-    return _.get(keys, ["0", "entity", "credentials"]);
+    return execQuery({ query: ['curl', `/v3/service_credential_bindings/${getGuid(_.head(keys))}/details`] }, (data: any) => data)
+        .then(data => data).catch(() => { return {}; });
 } 
