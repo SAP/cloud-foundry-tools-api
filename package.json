@@ -42,7 +42,7 @@
 	"dependencies": {
 		"comment-json": "4.1.0",
 		"fs-extra": "9.1.0",
-		"lodash": "4.17.20",
+		"lodash": "4.17.21",
 		"properties-reader": "2.2.0",
 		"url": "0.11.0"
 	},
@@ -64,7 +64,7 @@
 		"cz-conventional-changelog": "3.3.0",
 		"eslint": "^6.8.0",
 		"eslint-config-prettier": "^6.11.0",
-		"husky": "4.3.8",
+		"husky": "5.0.9",
 		"mocha": "^8.2.1",
 		"nyc": "^15.1.0",
 		"prettier": "^2.0.5",
