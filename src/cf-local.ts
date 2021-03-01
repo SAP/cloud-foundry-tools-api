@@ -406,7 +406,7 @@ export async function cfGetTargets(): Promise<CFTarget[]> {
 
 export async function cfGetServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
     evaluateQueryFilters(query, resourceServiceOfferings);
-    return execTotal({ query: `/v3/service_offerings?${composeQuery(query)}`, token: cancellationToken }, (service: any) => {
+    return execTotal({ query: `/v3/service_offerings?${composeQuery(await padQuerySpace(query))}`, token: cancellationToken }, (service: any) => {
         return Promise.resolve({
             label: getName(service),
             service_plans_url: _.get(service, ['links', 'service_plans', 'href']),
@@ -426,8 +426,7 @@ export async function cfGetServices(query?: IServiceQuery, cancellationToken?: C
 export async function cfGetSpaceServices(query?: IServiceQuery, spaceGUID?: string, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
     // Use filter functionality and exceptions to get the current space GUID. 
     // We can access [0] because it is the only filter returned
-    query = padQuery(query, [{ key: eFilters.space_guids, value: spaceGUID }]);
-    return cfGetServices(await padQuerySpace(padQuery(query, [{ key: eFilters.space_guids, value: spaceGUID }])), cancellationToken);
+    return cfGetServices(padQuery(query, [{ key: eFilters.space_guids, value: spaceGUID }]), cancellationToken);
 }
 
 export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {

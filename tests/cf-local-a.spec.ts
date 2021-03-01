@@ -269,7 +269,8 @@ describe("cf-local-a unit tests", () => {
     });
 
     describe("cfGetServices - service_offering calls", () => {
-        const testArgs = ["curl", `/v3/service_offerings?per_page=${CF_PAGE_SIZE}`];
+        const spaceGUID = "testSpaceGUID";
+        const testArgs = ["curl", `/v3/service_offerings?space_guids=${spaceGUID}&per_page=${CF_PAGE_SIZE}`];
         const cliResult: CliResult = {
             stdout: "",
             stderr: "",
@@ -277,9 +278,24 @@ describe("cf-local-a unit tests", () => {
             error: ""
         };
 
+        it("fail:: specific space guid required, run exitCode is not 0", async () => {
+            cliResult.error = "some error";
+            cliResult.exitCode = 1;
+            const spaceGuids = 'space-guid-1,space-guid-2';
+            const testArgs = ["curl", `/v3/service_offerings?space_guids=${spaceGuids}&per_page=${CF_PAGE_SIZE}`];
+            cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
+            try {
+                await cfLocal.cfGetServices({filters: [{key: eFilters.space_guids, value: spaceGuids}]});
+                fail("test should fail");
+            } catch (error) {
+                expect(error.message).to.be.equal(cliResult.error);
+            }
+        });
+
         it("fail:: run exitCode is not 0", async () => {
             cliResult.error = "some error";
             cliResult.exitCode = 1;
+            fsExtraMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
             try {
                 await cfLocal.cfGetServices();
@@ -293,6 +309,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "{}";
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
+            fsExtraMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             const services = await cfLocal.cfGetServices();
             expect(services).to.be.empty;
         });
@@ -320,6 +337,7 @@ describe("cf-local-a unit tests", () => {
                 }]
             }`;
             cliResult.exitCode = 0;
+            fsExtraMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
             const services = await cfLocal.cfGetServices();
             expect(services).to.have.lengthOf(2);
