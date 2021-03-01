@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company <alexander.gilin@sap.com>
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { expect } from "chai";
 import * as childProcess from 'child_process';
 import * as sinon from "sinon";
@@ -176,5 +170,11 @@ describe("cli unit tests", () => {
             expect(result.exitCode).to.be.equal(-2);
         });
 
+        it("stdout has empty data but only EOL", async () => {
+            execResult.stdout.on = (type: string, callback: any) => (callback("\n"));
+            childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
+            const result = await Cli.execute(undefined, undefined, token);
+            expect(result.stdout).to.be.empty;
+        });
     });
 });

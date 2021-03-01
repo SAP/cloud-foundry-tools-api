@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company <alexander.gilin@sap.com>
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { SpawnOptions, spawn } from 'child_process';
 import { parse } from "comment-json";
 import * as _ from "lodash";
@@ -81,7 +75,7 @@ export class Cli {
                 return;
             }
         }
-        resolve({ "stdout": stdout, "stderr": stderr, exitCode: code });
+        resolve({ "stdout": stdout === '\n' ? '' : stdout, "stderr": stderr, exitCode: code });
     }
 
     private static updateSpawnOptions(options: SpawnOptions) {

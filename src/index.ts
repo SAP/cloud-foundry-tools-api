@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company <alexander.gilin@sap.com>
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 export * from './types';
 export * from './cli';
 export * from './cf-local';
@@ -17,6 +11,9 @@ export async function apiGetServicesInstancesFilteredByType(serviceTypes: string
     return serviceUtils.getServicesInstancesFilteredByType(serviceTypes);
 }
 
+/**
+ * @deprecated use cfGetInstanceKeyParameters instead of
+ */
 export async function apiGetInstanceCredentials(instanceName: string): Promise<any> {
     return serviceUtils.getInstanceCredentials(instanceName);
 }
