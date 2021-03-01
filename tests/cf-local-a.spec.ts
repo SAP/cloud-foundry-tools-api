@@ -1,18 +1,13 @@
-/*
- * SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company <alexander.gilin@sap.com>
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { expect, assert } from "chai";
 import * as _ from "lodash";
 import * as sinon from "sinon";
 import * as fsextra from "fs-extra";
 import * as cfLocal from "../src/cf-local";
 import * as cli from "../src/cli";
-import { messages } from "../src/messages";
 import { fail } from "assert";
-import { CliResult, CF_PAGE_SIZE, OK, eFilters } from "../src/types";
+import { messages } from "../src/messages";
+import { CliResult, CF_PAGE_SIZE, OK, eFilters, eOperation } from "../src/types";
+import { cfGetConfigFilePath } from "../src/utils";
 
 describe("cf-local-a unit tests", () => {
     let sandbox: any;
@@ -41,7 +36,7 @@ describe("cf-local-a unit tests", () => {
         cfLocal.clearCacheServiceInstances();
     });
 
-    describe("cfLogin", () => {
+    describe("cfLogin scope", () => {
         const testArgs = ["login", "-a", testEndpoint, "-u", testUserEmail, "-p", testUserPassword, "-o", "no-org-for-now", "-s", "no-space-for-now"];
         const testOptions = { env: { "CF_COLOR": "false" } };
         const cliResult: CliResult = {
@@ -50,21 +45,21 @@ describe("cf-local-a unit tests", () => {
             exitCode: 1
         };
 
-        it("stdout is not empty, authentication is OK", async () => {
+        it("success:: stdout is not empty, authentication is OK", async () => {
             cliResult.stdout = `some text Authenticating...\n${OK} some text`;
             cliMock.expects("execute").withExactArgs(testArgs, testOptions, undefined).resolves(cliResult);
             const result = await cfLocal.cfLogin(testEndpoint, testUserEmail, testUserPassword);
             expect(result).to.be.equal(OK);
         });
 
-        it("stdout is not empty, authentication is not OK", async () => {
+        it("fail:: stdout is not empty, authentication is not OK", async () => {
             cliResult.stdout = "some text";
             cliMock.expects("execute").withExactArgs(testArgs, testOptions, undefined).resolves(cliResult);
             const result = await cfLocal.cfLogin(testEndpoint, testUserEmail, testUserPassword);
             expect(result).to.be.equal(cliResult.stdout);
         });
 
-        it("stdout is empty, stderr is not empty", async () => {
+        it("fail:: stdout is empty, stderr is not empty", async () => {
             cliResult.stdout = "";
             cliResult.stderr = "some error";
             cliMock.expects("execute").withExactArgs(testArgs, testOptions, undefined).resolves(cliResult);
@@ -72,7 +67,7 @@ describe("cf-local-a unit tests", () => {
             expect(result).to.be.equal(cliResult.stderr);
         });
 
-        it("stdout is empty, stderr is empty", async () => {
+        it("fail:: stdout is empty, stderr is empty", async () => {
             cliResult.stdout = "";
             cliResult.stderr = "";
             cliMock.expects("execute").withExactArgs(testArgs, testOptions, undefined).resolves(cliResult);
@@ -82,14 +77,14 @@ describe("cf-local-a unit tests", () => {
     });
 
     describe("cfGetAvailableOrgs", () => {
-        const testArgs = ["curl", `/v2/organizations?results-per-page=${CF_PAGE_SIZE}`];
+        const testArgs = ["curl", `/v3/organizations?per_page=${CF_PAGE_SIZE}`];
         const cliResult: CliResult = {
             stdout: "",
             stderr: "",
             exitCode: 0
         };
 
-        it("stderr is not empty", async () => {
+        it("fail:: stderr is not empty", async () => {
             cliResult.stderr = "some error";
             cliResult.exitCode = 1;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
@@ -101,7 +96,7 @@ describe("cf-local-a unit tests", () => {
             }
         });
 
-        it("stdout is an empty object", async () => {
+        it("success:: but stdout is an empty object", async () => {
             cliResult.stdout = "{}";
             cliResult.stderr = "";
             cliResult.exitCode = 0;
@@ -110,15 +105,12 @@ describe("cf-local-a unit tests", () => {
             expect(result).to.be.empty;
         });
 
-        it("stdout is not an empty object", async () => {
+        it("success:: stdout has not an empty object", async () => {
             cliResult.stdout = `{
                 "resources": [{
-                    "entity": {
-                        "name": "testName"
-                    },
-                    "metadata": {
-                        "guid": "testGuid"
-                    }
+                    "name": "testName",
+                    "guid": "testGuid",
+                    "metadata": {}
                 }]
             }`;
             cliResult.stderr = "";
@@ -129,17 +121,26 @@ describe("cf-local-a unit tests", () => {
             expect(result[0].label).to.be.equal("testName");
             expect(result[0].guid).to.be.equal("testGuid");
         });
+
+        it("fail:: not allowed filter received", async () => {
+            try {
+                await cfLocal.cfGetAvailableOrgs({ filters: [{ key: eFilters.service_offering_guids, value: 'value' }] });
+                fail("test should fail");
+            } catch (error) {
+                expect(error.message).to.be.equal(messages.not_allowed_filter(eFilters.service_offering_guids, "organizations"));
+            }
+        });
     });
 
     describe("cfGetAvailableSpaces", () => {
-        const testArgs = ["curl", "/v2/spaces"];
+        const testArgs = ["curl", "/v3/spaces?per_page=297"];
         const cliResult: CliResult = {
             stdout: "",
             stderr: "",
             exitCode: 0
         };
 
-        it("stderr is not empty, no org guid provided", async () => {
+        it("fail:: stderr is not empty, no org guid provided", async () => {
             cliResult.stderr = "some error";
             cliResult.exitCode = 1;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
@@ -151,20 +152,21 @@ describe("cf-local-a unit tests", () => {
             }
         });
 
-        it("stderr is not empty, org guid is provided", async () => {
+        it("fail:: stderr is not empty, org guid is provided", async () => {
             cliResult.stderr = "some error";
             cliResult.exitCode = 1;
-            testArgs[1] = "/v2/organizations/testOrgGuid/spaces";
+            const spaceGuid = "testOrgGuid";
+            testArgs[1] = `/v3/spaces?organization_guids=${spaceGuid}&per_page=297`;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
             try {
-                await cfLocal.cfGetAvailableSpaces("testOrgGuid");
+                await cfLocal.cfGetAvailableSpaces(spaceGuid);
                 fail("test should fail");
             } catch (error) {
                 expect(error.message).to.be.equal(cliResult.stderr);
             }
         });
 
-        it("stdout is an empty object", async () => {
+        it("success:: stdout has an empty object result", async () => {
             cliResult.stdout = "{}";
             cliResult.stderr = "";
             cliResult.exitCode = 0;
@@ -173,15 +175,11 @@ describe("cf-local-a unit tests", () => {
             expect(result).to.be.empty;
         });
 
-        it("stdout is not an empty object", async () => {
+        it("success:: stdout has structured result", async () => {
             cliResult.stdout = `{
                 "resources": [{
-                    "entity": {
-                        "name": "testName"
-                    },
-                    "metadata": {
-                        "guid": "testGuid"
-                    }
+                    "name": "testName",
+                    "guid": "testGuid"
                 }]
             }`;
             cliResult.stderr = "";
@@ -195,9 +193,9 @@ describe("cf-local-a unit tests", () => {
     });
 
     describe("cfGetSpaceServices", () => {
-        const configFilePath = cfLocal.cfGetConfigFilePath();
+        const configFilePath = cfGetConfigFilePath();
         const spaceGUID = "testSpaceGUID";
-        const testArgs = ["curl", `/v2/spaces/${spaceGUID}/services?results-per-page=${CF_PAGE_SIZE}`];
+        const testArgs = ["curl", `/v3/service_offerings?space_guids=${spaceGUID}&per_page=${CF_PAGE_SIZE}`];
         const cliResult: CliResult = {
             stdout: "",
             stderr: "",
@@ -206,18 +204,18 @@ describe("cf-local-a unit tests", () => {
         };
         const stdOutOneService = `{
             "resources": [{
-                "entity": {
-                    "service_plans_url": "service_plans_url_1",
-                    "label": "label_1",
-                    "description": "description_1"
+                "links": {
+                    "service_plans": {
+                        "href": "service_plans_url_1"
+                    }
                 },
-                "metadata": {
-                    "guid": 1
-                }
+                "name": "label_1",
+                "description": "description_1",
+                "guid": 1
             }]
         }`;
 
-        it("exitCode is not 0", async () => {
+        it("fail:: exitCode is not 0", async () => {
             cliResult.error = "some error";
             cliResult.exitCode = 1;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
@@ -230,7 +228,7 @@ describe("cf-local-a unit tests", () => {
             }
         });
 
-        it("exitCode is 0, but there are no services", async () => {
+        it("success:: exitCode is 0, but there are no services found", async () => {
             cliResult.stdout = "{}";
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
@@ -239,7 +237,7 @@ describe("cf-local-a unit tests", () => {
             expect(services).to.be.empty;
         });
 
-        it("exitCode is 0, but there are services", async () => {
+        it("ok:: exitCode is 0, there are services found", async () => {
             cliResult.stdout = stdOutOneService;
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
@@ -248,21 +246,30 @@ describe("cf-local-a unit tests", () => {
             expect(services).to.have.lengthOf(1);
         });
 
-        it("request services from specified space, there are services", async () => {
+        it("ok:: request services from specified space, there are services found", async () => {
             cliResult.stdout = stdOutOneService;
             const spaceGUID = "specifiedSpaceGUID";
             const CF_PAGE_SIZE = 13;
             const serviceLabel = 'serviceLabel';
-            const localTestArgs = ["curl", `/v2/spaces/${spaceGUID}/services?q=label:${serviceLabel}&results-per-page=${CF_PAGE_SIZE}`];
+            const localTestArgs = ["curl", `/v3/service_offerings?names=${serviceLabel}&space_guids=${spaceGUID}&per_page=${CF_PAGE_SIZE}`];
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(localTestArgs, undefined, undefined).resolves(cliResult);
-            const services = await cfLocal.cfGetSpaceServices({ filters: [{ key: eFilters.label, value: serviceLabel }], 'results-per-page': CF_PAGE_SIZE }, spaceGUID);
+            const services = await cfLocal.cfGetSpaceServices({ filters: [{ key: eFilters.names, value: serviceLabel }], 'per_page': CF_PAGE_SIZE }, spaceGUID);
             expect(services).to.have.lengthOf(1);
+        });
+
+        it("exception:: not allowed filter received", async () => {
+            try {
+                await cfLocal.cfGetSpaceServices({ filters: [{ key: eFilters.service_offering_guids, value: 'value' }] }, 'space-guid-test');
+                fail("test should fail");
+            } catch (error) {
+                expect(error.message).to.be.equal(messages.not_allowed_filter(eFilters.service_offering_guids, "service_offerings"));
+            }
         });
     });
 
-    describe("getServicesFromCF", () => {
-        const testArgs = ["curl", `/v2/services?results-per-page=${CF_PAGE_SIZE}`];
+    describe("cfGetServices - service_offering calls", () => {
+        const testArgs = ["curl", `/v3/service_offerings?per_page=${CF_PAGE_SIZE}`];
         const cliResult: CliResult = {
             stdout: "",
             stderr: "",
@@ -270,7 +277,7 @@ describe("cf-local-a unit tests", () => {
             error: ""
         };
 
-        it("exitCode is not 0", async () => {
+        it("fail:: run exitCode is not 0", async () => {
             cliResult.error = "some error";
             cliResult.exitCode = 1;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
@@ -282,7 +289,7 @@ describe("cf-local-a unit tests", () => {
             }
         });
 
-        it("exitCode is 0, but there are no services", async () => {
+        it("ok:: exitCode is 0, but there are no services found", async () => {
             cliResult.stdout = "{}";
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
@@ -290,26 +297,26 @@ describe("cf-local-a unit tests", () => {
             expect(services).to.be.empty;
         });
 
-        it("exitCode is 0, but there are services", async () => {
+        it("ok:: exitCode is 0, there are services found", async () => {
             cliResult.stdout = `{
                 "resources": [{
-                    "entity": {
-                        "service_plans_url": "service_plans_url_1",
-                        "label": "label_1",
-                        "description": "description_1"
+                    "links": {
+                        "service_plans": {
+                            "href": "service_plans_url_1"
+                        }
                     },
-                    "metadata": {
-                        "guid": 1
-                    }
+                    "name": "label_1",
+                    "description": "description_1",
+                    "guid": 1
                 }, {
-                    "entity": {
-                        "service_plans_url": "service_plans_url_2",
-                        "label": "label_2",
-                        "description": "description_2"
+                    "links": {
+                        "service_plans": {
+                            "href": "service_plans_url_2"
+                        }
                     },
-                    "metadata": {
-                        "guid": 2
-                    }
+                    "name": "label_2",
+                    "description": "description_2",
+                    "guid": 2
                 }]
             }`;
             cliResult.exitCode = 0;
@@ -319,7 +326,7 @@ describe("cf-local-a unit tests", () => {
         });
     });
 
-    describe("getServicePlansFromCF", () => {
+    describe("cfGetServicePlans scope", () => {
         const servicePlanUrl = "testServicePlanUrl";
         const testArgs = ["curl", servicePlanUrl];
         const cliResult: CliResult = {
@@ -329,7 +336,7 @@ describe("cf-local-a unit tests", () => {
             error: ""
         };
 
-        it("exitCode is not 0", async () => {
+        it("fail:: exitCode is not 0", async () => {
             cliResult.error = "some error";
             cliResult.exitCode = 1;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
@@ -341,7 +348,7 @@ describe("cf-local-a unit tests", () => {
             }
         });
 
-        it("exitCode is 0, but there are no services= plans", async () => {
+        it("ok:: exitCode is 0, but there are no services found by requested plan url", async () => {
             cliResult.stdout = "{}";
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
@@ -349,16 +356,12 @@ describe("cf-local-a unit tests", () => {
             expect(_.size(servicePlan)).to.be.equal(0);
         });
 
-        it("exitCode is 0, but there are services", async () => {
+        it("ok:: exitCode is 0, there are services found by requested plan url", async () => {
             cliResult.stdout = `{
                 "resources": [{
-                    "entity": {
-                        "name": "name_1",
-                        "description": "description_1"
-                    },
-                    "metadata": {
-                        "guid": "1"
-                    }
+                    "name": "name_1",
+                    "description": "description_1",
+                    "guid": "1"
                 }]
             }`;
             cliResult.exitCode = 0;
@@ -368,38 +371,42 @@ describe("cf-local-a unit tests", () => {
         });
     });
 
-    describe("getConfigFileField", () => {
-        const configFilePath = cfLocal.cfGetConfigFilePath();
-
-        it("field exists", async () => {
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"name": "testName"}`);
-            const result = await cfLocal.cfGetConfigFileField("name");
-            expect(result).to.be.equal("testName");
-        });
-
-        it("field does not exist", async () => {
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves("{}");
-            const result = await cfLocal.cfGetConfigFileField("name");
-            expect(result).to.be.undefined;
-        });
-
-        it("failed to read a config file", async () => {
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").throws(new Error());
-            const result = await cfLocal.cfGetConfigFileField("name");
-            expect(result).to.be.undefined;
-        });
-    });
-
-    describe("getServicesInstances", () => {
-        const configFilePath = cfLocal.cfGetConfigFilePath();
+    describe("cfGetServiceInstances calls", () => {
+        const configFilePath = cfGetConfigFilePath();
         const cliResult: CliResult = {
             stdout: "",
             stderr: "",
             exitCode: 0,
             error: ""
         };
+        const spaceGuid = "testSpaceGUID";
+        const planName = "test_service_label1";
+        const servicesGuids = ['service-guid-1', 'service-guid-2', 'service-guid-3'];
+        const servicesNames = ['service-1', 'service-2', 'service-3'];
+        const resultPlan = {
+            name: planName,
+            included: {
+                service_offerings: [{
+                    guid: servicesGuids[1],
+                    name: servicesNames[1]
+                },
+                {
+                    guid: servicesGuids[0],
+                    name: servicesNames[0]
+                }]
+            },
+            relationships: {
+                service_offering: {
+                    data: {
+                        guid: servicesGuids[0]
+                    }
+                }
+            }
+        };
+        const planGuids = ['service_plan-guid-1', 'service_plan-guid-3', 'service_plan-guid-2', 'service_plan-guid-4'];
+        const serviceNames = ['test_service_name1', 'test_service_name2', 'test_service_name3', 'test_service_name4'];
 
-        it("space not set", async () => {
+        it("exception:: cf space not defined, default space value is unavailable", async () => {
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{}`);
             try {
                 await cfLocal.cfGetServiceInstances();
@@ -409,15 +416,13 @@ describe("cf-local-a unit tests", () => {
             }
         });
 
-        it("space set, no page number provided, exitCode is 1, cliResult.error is defined", async () => {
+        it("exception:: cf space defined, no page number provided, exitCode is 1, cliResult.error is defined", async () => {
             cliResult.exitCode = 1;
             cliResult.error = "testError";
             cliResult.stdout = "";
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": {
-                "GUID": "testSpaceGUID"
-            }}`);
-            const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`;
-            cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
+            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            const param = `v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
                 await cfLocal.cfGetServiceInstances();
                 fail("test should fail");
@@ -426,32 +431,29 @@ describe("cf-local-a unit tests", () => {
             }
         });
 
-        it("space set, no page number provided, exitCode is 1, cliResult.error not defined", async () => {
+        it("exception:: cf space defined, no page number provided, exitCode is 1, query operation filter usied", async () => {
             cliResult.exitCode = 1;
             cliResult.error = "";
             cliResult.stdout = "testStdout";
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": {
-                "GUID": "testSpaceGUID"
-            }}`);
-            const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`;
-            cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
+            const timestamp = '2020-06-30T23:49:04Z';
+            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            const param = `v3/service_instances?created_ats[gte]=${timestamp}&fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
-                await cfLocal.cfGetServiceInstances();
+                await cfLocal.cfGetServiceInstances({filters: [{key: eFilters.created_ats, value: timestamp, op: eOperation.gte}]});
                 fail("test should fail");
             } catch (error) {
                 expect(error.message).to.be.equal("testStdout");
             }
         });
 
-        it("space set, page number provided, exitCode is 1, cliResult.error is defined", async () => {
+        it("exception:: cf space set, page number provided, exitCode is 1, cliResult.error is defined", async () => {
             cliResult.exitCode = 1;
             cliResult.error = "testError";
             cliResult.stdout = "";
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": {
-                "GUID": "testSpaceGUID"
-            }}`);
-            const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&page=5&results-per-page=${CF_PAGE_SIZE}`;
-            cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
+            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            const param = `v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&page=5&per_page=${CF_PAGE_SIZE}`;
+            cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
                 await cfLocal.cfGetServiceInstances({ page: 5 });
                 fail("test should fail");
@@ -460,161 +462,153 @@ describe("cf-local-a unit tests", () => {
             }
         });
 
-        it("exitCode is 0, cliResult.stdout is defined", async () => {
+        it("ok:: several service plan calls fails -> checking error in service_plan response", async () => {
             const tags = ["hana", "accounting", "mongodb"];
             cliResult.exitCode = 0;
             cliResult.error = "";
-            cliResult.stdout = `{
+
+            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            const param = `v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            const plansResult = {
                 "resources": [{
-                    "entity": {
-                        "service_url": "test_service_url_1",
-                        "name": "test_service_name1",
-                        "label": "test_service_label1",
-                        "tags": ["hana", "accounting", "mongodb"]
+                    "name": serviceNames[0],
+                    "tags": ["hana", "accounting", "mongodb"],
+                    "relationships": {
+                        "service_plan": {
+                            "data": {
+                                "guid": planGuids[0]
+                            }
+                        }
                     }
                 }, {
-                    "entity": {
-                        "service_url": "test_service_url_1",
-                        "name": "test_service_name2",
-                        "label": "test_service_label2",
-                        "tags": []
+                    "name": serviceNames[1],
+                    "tags": [],
+                    "relationships": {
+                        "service_plan": {
+                            "data": {
+                                "guid": planGuids[0]
+                            }
+                        }
                     }
                 }, {
-                    "entity": {
-                        "service_url": "test_service_url_3",
-                        "name": "test_service_name3",
-                        "label": "test_service_label3"
+                    "name": serviceNames[2],
+                    "relationships": {
+                        "service_plan": {
+                            "data": {
+                                "guid": planGuids[1]
+                            }
+                        }
                     }
                 }]
-            }`;
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": {
-                "GUID": "testSpaceGUID"
-            }}`);
-            const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`;
-            cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_1"], undefined, undefined).resolves({ exitCode: 0, stdout: `{"entity": {"label": "test_service_label1"}}` });
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_3"], undefined, undefined).rejects(new Error("some error"));
+            };
+            cliResult.stdout = JSON.stringify(plansResult);
+            cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
+            cliMock.expects("execute").withExactArgs(["curl", "/v3/service_plans/service_plan-guid-1?include=service_offering"], undefined, undefined).resolves({ exitCode: 0, stdout: JSON.stringify(resultPlan) });
+            cliMock.expects("execute").withExactArgs(["curl", "/v3/service_plans/service_plan-guid-3?include=service_offering"], undefined, undefined).resolves({ exitCode: 0, stdout: `{"errors": [{"error": "some error"}]}` });
             const result = await cfLocal.cfGetServiceInstances({
                 filters: [
-                    { key: eFilters.space_guid, value: '' }, { key: eFilters.service_plan_guid, value: '' }
+                    { key: eFilters.space_guids, value: '' }, { key: eFilters.service_plan_guids, value: '' }
                 ],
-                'results-per-page': CF_PAGE_SIZE
+                'per_page': CF_PAGE_SIZE
             });
             expect(result).to.have.lengthOf(3);
-            expect(result[0].serviceName).to.be.equal("test_service_label1");
-            expect(result[0].label).to.be.equal("test_service_name1");
+            expect(result[0].serviceName).to.be.equal(servicesNames[0]);
+            expect(result[0].plan).to.be.equal(planName);
+            expect(result[0].plan_guid).to.be.equal(planGuids[0]);
+            expect(result[0].label).to.be.equal(serviceNames[0]);
             assert.deepEqual(result[0].tags, tags);
-            expect(result[1].serviceName).to.be.equal("test_service_label1");
-            expect(result[1].label).to.be.equal("test_service_name2");
+            expect(result[1].serviceName).to.be.equal(servicesNames[0]);
+            expect(result[1].plan).to.be.equal(planName);
+            expect(result[1].plan_guid).to.be.equal(planGuids[0]);
+            expect(result[1].label).to.be.equal(serviceNames[1]);
             assert.deepEqual(result[1].tags, []);
             expect(result[2].serviceName).to.be.equal("unknown");
-            expect(result[2].label).to.be.equal("test_service_name3");
+            expect(result[2].plan).to.be.equal("unknown");
+            expect(result[2].plan_guid).to.be.equal(planGuids[1]);
+            expect(result[2].label).to.be.equal(serviceNames[2]);
         });
 
-        it("exitCode once is 1, cliResult.stdout is defined", async () => {
+        it("ok:: few calls for service plan fails or have errord -> checking wrong output and rejection in service_plan response", async () => {
             cliResult.exitCode = 0;
             cliResult.error = "";
-            cliResult.stdout = `{
+            const plansResult = {
                 "resources": [{
-                    "entity": {
-                        "service_url": "test_service_url_1",
-                        "name": "test_service_name1",
-                        "label": "test_service_label1"
+                    "name": serviceNames[0],
+                    "tags": ["hana", "accounting", "mongodb"],
+                    "relationships": {
+                        "service_plan": {
+                            "data": {
+                                "guid": planGuids[0]
+                            }
+                        }
                     }
                 }, {
-                    "entity": {
-                        "service_url": "test_service_url_2",
-                        "name": "test_service_name2",
-                        "label": "test_service_label2"
+                    "name": serviceNames[1],
+                    "tags": [],
+                    "relationships": {
+                        "service_plan": {
+                            "data": {
+                                "guid": planGuids[1]
+                            }
+                        }
                     }
                 }, {
-                    "entity": {
-                        "service_url": "test_service_url_3",
-                        "name": "test_service_name3",
-                        "label": "test_service_label3"
+                    "name": serviceNames[2],
+                    "relationships": {
+                        "service_plan": {
+                            "data": {
+                                "guid": planGuids[2]
+                            }
+                        }
                     }
                 }, {
-                    "entity": {
-                        "service_url": "test_service_url_4",
-                        "name": "test_service_name4",
-                        "label": "test_service_label4"
+                    "name": serviceNames[3],
+                    "relationships": {
+                        "service_plan": {
+                            "data": {
+                                "guid": planGuids[3]
+                            }
+                        }
                     }
                 }]
-            }`;
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": {
-                "GUID": "testSpaceGUID"
-            }}`);
-            const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`;
-            cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_1"], undefined, undefined).resolves({ stdout: `{"entity": {"label": "testLabel1"}}`, exitCode: 0 });
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_2"], undefined, undefined).resolves({ stdout: `{"entity": {"label": "testLabel2"}}`, exitCode: 1 });
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_3"], undefined, undefined).resolves({ stdout: `{"entity": {"label"}}`, exitCode: 0 });
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_4"], undefined, undefined).rejects(new Error("some error"));
+            };
+            cliResult.stdout = JSON.stringify(plansResult);
+            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            const param = `v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
+            cliMock.expects("execute").withExactArgs(["curl", "/v3/service_plans/service_plan-guid-1?include=service_offering"], undefined, undefined).resolves({ stdout: JSON.stringify(resultPlan), exitCode: 0 });
+            cliMock.expects("execute").withExactArgs(["curl", "/v3/service_plans/service_plan-guid-2?include=service_offering"], undefined, undefined).resolves({ stdout: JSON.stringify(resultPlan), exitCode: 1 });
+            cliMock.expects("execute").withExactArgs(["curl", "/v3/service_plans/service_plan-guid-3?include=service_offering"], undefined, undefined).resolves({ stdout: `{"entity": {"label"}}`, exitCode: 0 });
+            cliMock.expects("execute").withExactArgs(["curl", "/v3/service_plans/service_plan-guid-4?include=service_offering"], undefined, undefined).rejects(new Error("some error"));
             const result = await cfLocal.cfGetServiceInstances();
             expect(result).to.have.lengthOf(4);
-            expect(result[0].serviceName).to.be.equal("testLabel1");
-            expect(result[0].label).to.be.equal("test_service_name1");
+            expect(result[0].serviceName).to.be.equal(servicesNames[0]);
+            expect(result[0].plan).to.be.equal(planName);
+            expect(result[0].plan_guid).to.be.equal(planGuids[0]);
+            expect(result[0].label).to.be.equal(serviceNames[0]);
             expect(result[1].serviceName).to.be.equal("unknown");
-            expect(result[1].label).to.be.equal("test_service_name2");
+            expect(result[1].plan).to.be.equal('unknown');
+            expect(result[1].plan_guid).to.be.equal(planGuids[1]);
+            expect(result[1].label).to.be.equal(serviceNames[1]);
             expect(result[2].serviceName).to.be.equal("unknown");
-            expect(result[2].label).to.be.equal("test_service_name3");
+            expect(result[2].plan).to.be.equal('unknown');
+            expect(result[2].plan_guid).to.be.equal(planGuids[2]);
+            expect(result[2].label).to.be.equal(serviceNames[2]);
             expect(result[3].serviceName).to.be.equal("unknown");
-            expect(result[3].label).to.be.equal("test_service_name4");
+            expect(result[3].plan).to.be.equal('unknown');
+            expect(result[3].plan_guid).to.be.equal(planGuids[3]);
+            expect(result[3].label).to.be.equal(serviceNames[3]);
         });
 
-        it("cliResult.stdout is partially defined", async () => {
-            cliResult.exitCode = 0;
-            cliResult.error = "";
-            cliResult.stdout = `{
-                "resources": [{
-                    "entity": {
-                        "service_url": "test_service_url_1",
-                        "name": "test_service_name1",
-                        "label": "test_service_label1"
-                    }
-                }, {
-                    "entity": {
-                        "name": "test_service_name2",
-                        "label": "test_service_label2"
-                    }
-                }, {
-                    "entity": {
-                        "service_url": "test_service_url_1",
-                        "name": "test_service_name3",
-                        "label": "test_service_label3"
-                    }
-                }, {
-                    "entity": {
-                        "service_url": "test_service_url_1",
-                        "name": "test_service_name4",
-                        "label": "test_service_label4"
-                    }
-                }]
-            }`;
-            const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`;
-            cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
-            cliMock.expects("execute").withExactArgs(["curl", "test_service_url_1"], undefined, undefined).resolves({ stdout: `{"entity": {"label": "testLabel1"}}`, exitCode: 0 });
-            const result = await cfLocal.cfGetServiceInstances({ filters: [{ key: eFilters.space_guid, value: "testSpaceGUID" }] });
-            expect(result).to.have.lengthOf(4);
-            expect(result[0].serviceName).to.be.equal("testLabel1");
-            expect(result[0].label).to.be.equal("test_service_name1");
-            expect(result[1].serviceName).to.be.equal("unknown");
-            expect(result[1].label).to.be.equal("test_service_name2");
-            expect(result[2].serviceName).to.be.equal("testLabel1");
-            expect(result[2].label).to.be.equal("test_service_name3");
-            expect(result[3].serviceName).to.be.equal("testLabel1");
-            expect(result[3].label).to.be.equal("test_service_name4");
-        });
-
-        it("cliResult.stdout is empty", async () => {
+        it("ok:: no service instances found", async () => {
             cliResult.exitCode = 0;
             cliResult.error = "";
             cliResult.stdout = `{
                 "resources": []
             }`;
-            const servicesUrl = `v2/service_instances?q=space_guid:testSpaceGUID&results-per-page=${CF_PAGE_SIZE}`;
-            cliMock.expects("execute").withArgs(["curl", servicesUrl]).resolves(cliResult);
-            const result = await cfLocal.cfGetServiceInstances({ filters: [{ key: eFilters.space_guid, value: "testSpaceGUID" }] });
+            const param = `v3/service_instances?space_guids=${spaceGuid}&fields[service_plan]=guid,name&type=managed&per_page=${CF_PAGE_SIZE}`;
+            cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
+            const result = await cfLocal.cfGetServiceInstances({ filters: [{ key: eFilters.space_guids, value: spaceGuid }] });
             expect(result).to.have.lengthOf(0);
         });
     });

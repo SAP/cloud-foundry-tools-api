@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company <alexander.gilin@sap.com>
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 export const OK = "OK";
 export const NEW_LINE = "\n";
 
@@ -61,6 +55,7 @@ export interface ServiceInstanceInfo {
     tags?: string[];
     alwaysShow?: boolean;
     plan_guid?: string;
+    plan?: string;
     credentials?: any;
 }
 
@@ -75,11 +70,21 @@ export interface PlanInfo {
     label: string;
     guid: string;
     description: string;
+    service_offering?: {
+        guid: string;
+        name: string;
+        description: string;
+    };
 }
 
 export interface CFResource {
+    guid: string;
+    name: string;
+    description: string;
+    schemas: any;
+    relationships: any;
     metadata: any;
-    entity: any;
+    links: any;
 }
 
 export interface ServiceTypeInfo {
@@ -93,7 +98,7 @@ export interface ServiceTypeInfo {
     ups?: {                 // user-provided-services section
         tag?: string;       // uses to filter the display of user-provided-services by tag. can be sigle name or regex expression ('/[hana|monodb]/')
         isShow?: boolean;   // force to fetch ups instances
-    }; 
+    };
     allowCreate?: {         // allow creation a new service instance during binding
         serviceName?: string;   // uses to filter the display of service instance creation (Regex). instances by service type: 'hana', 'xsuaa' and etc.
         plan?: string;          // plan for the created service instance (Regex)
@@ -105,25 +110,37 @@ export interface ServiceTypeInfo {
 }
 
 export enum eFilters {
-    name = 'name',
-    space_guid = 'space_guid',
-    service_plan_guid = 'service_plan_guid',
-    service_binding_guid = 'service_binding_guid',
-    gateway_name = 'gateway_name',
-    organization_guid = 'organization_guid',
-    service_key_guid = 'service_key_guid',
-    service_guid = 'service_guid',
-    service_instance_guid = 'service_instance_guid',
-    user_guid = 'user_guid',
-    manager_guid = 'manager_guid',
-    billing_manager_guid = 'billing_manager_guid',
-    auditor_guid = 'auditor_guid',
+    type = 'type',
+    names = 'names',
+    guids = 'guids',
+    app_guids = 'app_guids',
+    app_names = 'app_names',
+    space_guids = 'space_guids',
+    available = 'available',
+    broker_catalog_ids = 'broker_catalog_ids',
+    service_broker_guids = 'service_broker_guids',
+    service_broker_names = 'service_broker_names',
+    service_plan_guids = 'service_plan_guids',
+    organization_guids = 'organization_guids',
+    service_plan_names = 'service_plan_names',
+    service_plan = 'service_plan',
+    service_instance_guids = 'service_instance_guids',
+    service_instance_names = 'service_instance_names',
+    service_offering_guids = 'service_offering_guids',
+    service_offering_names = 'service_offering_names',
+    label_selector = 'label_selector',
+    page = 'page',
+    per_page = 'per_page',
+    oder_by = 'order_by',
+    created_ats = 'created_ats', 
+    updated_ats = 'updated_ats',
     status = 'status',
-    label = 'label'
+    // label = 'label',
+    include = 'include'
 }
 
 export enum eOperation {
-    eq = ':', be = '>=', le = '<=', l = '<', b = '>', IN = '%20IN%20'
+    gte = 'gte', lte = 'lte', lt = 'lt', gt = 'gt', not = "not", fields = 'fields'
 }
 export interface IServiceFilters { // eslint-disable-line @typescript-eslint/interface-name-prefix
     key: eFilters;
@@ -132,12 +149,13 @@ export interface IServiceFilters { // eslint-disable-line @typescript-eslint/int
 }
 
 export enum eOrderDirection { asc, desc }
+export enum eServiceTypes { managed = 'managed', user_provided = "user-provided" }
 
 export interface IServiceQuery { // eslint-disable-line @typescript-eslint/interface-name-prefix
     filters?: IServiceFilters[];
-    'results-per-page'?: number;
+    per_page?: number; // number of results per page : valid values are 1 through 5000
     page?: number;
-    'order-direction'?: eOrderDirection;
+    order_by?: eOrderDirection;
 }
 
 export interface ServiceBinding {
