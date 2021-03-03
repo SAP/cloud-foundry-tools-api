@@ -169,12 +169,5 @@ describe("cli unit tests", () => {
             expect(result.stdout).to.be.empty;
             expect(result.exitCode).to.be.equal(-2);
         });
-
-        it("stdout has empty data but only EOL", async () => {
-            execResult.stdout.on = (type: string, callback: any) => (callback("\n"));
-            childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
-            const result = await Cli.execute(undefined, undefined, token);
-            expect(result.stdout).to.be.empty;
-        });
     });
 });

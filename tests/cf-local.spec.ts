@@ -7,7 +7,7 @@ import * as cli from "../src/cli";
 import { messages } from "../src/messages";
 import { stringify } from "comment-json";
 import { fail } from "assert";
-import { CliResult, DEFAULT_TARGET, ProgressHandler, CF_PAGE_SIZE, PlanInfo, eFilters } from "../src/types";
+import { CliResult, DEFAULT_TARGET, ProgressHandler, CF_PAGE_SIZE, PlanInfo, eFilters, eServiceTypes } from "../src/types";
 import { cfGetConfigFilePath } from "../src/utils";
 
 describe("cf-local unit tests", () => {
@@ -189,7 +189,7 @@ describe("cf-local unit tests", () => {
 
         it("ok:: stdout has no error", async () => {
             instanceName = `${baseInstanceName}190`;
-            cliResult.stdout = `{}`;
+            cliResult.stdout = `\n`;
             cliResult.error = "";
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_instances", "-d",
@@ -880,6 +880,7 @@ describe("cf-local unit tests", () => {
             const plansResult = {
                 "resources": [{
                     "name": serviceNames[0],
+                    type: eServiceTypes.managed,
                     "tags": ["hana", "accounting", "mongodb"],
                     "relationships": {
                         "service_plan": {

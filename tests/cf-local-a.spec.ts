@@ -6,7 +6,7 @@ import * as cfLocal from "../src/cf-local";
 import * as cli from "../src/cli";
 import { fail } from "assert";
 import { messages } from "../src/messages";
-import { CliResult, CF_PAGE_SIZE, OK, eFilters, eOperation } from "../src/types";
+import { CliResult, CF_PAGE_SIZE, OK, eFilters, eOperation, eServiceTypes } from "../src/types";
 import { cfGetConfigFilePath } from "../src/utils";
 
 describe("cf-local-a unit tests", () => {
@@ -285,7 +285,7 @@ describe("cf-local-a unit tests", () => {
             const testArgs = ["curl", `/v3/service_offerings?space_guids=${spaceGuids}&per_page=${CF_PAGE_SIZE}`];
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
             try {
-                await cfLocal.cfGetServices({filters: [{key: eFilters.space_guids, value: spaceGuids}]});
+                await cfLocal.cfGetServices({ filters: [{ key: eFilters.space_guids, value: spaceGuids }] });
                 fail("test should fail");
             } catch (error) {
                 expect(error.message).to.be.equal(cliResult.error);
@@ -458,7 +458,7 @@ describe("cf-local-a unit tests", () => {
             const param = `v3/service_instances?created_ats[gte]=${timestamp}&fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
-                await cfLocal.cfGetServiceInstances({filters: [{key: eFilters.created_ats, value: timestamp, op: eOperation.gte}]});
+                await cfLocal.cfGetServiceInstances({ filters: [{ key: eFilters.created_ats, value: timestamp, op: eOperation.gte }] });
                 fail("test should fail");
             } catch (error) {
                 expect(error.message).to.be.equal("testStdout");
@@ -490,6 +490,7 @@ describe("cf-local-a unit tests", () => {
             const plansResult = {
                 "resources": [{
                     "name": serviceNames[0],
+                    type: eServiceTypes.managed,
                     "tags": ["hana", "accounting", "mongodb"],
                     "relationships": {
                         "service_plan": {
@@ -501,6 +502,7 @@ describe("cf-local-a unit tests", () => {
                 }, {
                     "name": serviceNames[1],
                     "tags": [],
+                    type: eServiceTypes.managed,
                     "relationships": {
                         "service_plan": {
                             "data": {
@@ -510,6 +512,7 @@ describe("cf-local-a unit tests", () => {
                     }
                 }, {
                     "name": serviceNames[2],
+                    type: eServiceTypes.managed,
                     "relationships": {
                         "service_plan": {
                             "data": {
@@ -552,6 +555,7 @@ describe("cf-local-a unit tests", () => {
             const plansResult = {
                 "resources": [{
                     "name": serviceNames[0],
+                    type: eServiceTypes.managed,
                     "tags": ["hana", "accounting", "mongodb"],
                     "relationships": {
                         "service_plan": {
@@ -562,6 +566,7 @@ describe("cf-local-a unit tests", () => {
                     }
                 }, {
                     "name": serviceNames[1],
+                    type: eServiceTypes.managed,
                     "tags": [],
                     "relationships": {
                         "service_plan": {
@@ -572,6 +577,7 @@ describe("cf-local-a unit tests", () => {
                     }
                 }, {
                     "name": serviceNames[2],
+                    type: eServiceTypes.managed,
                     "relationships": {
                         "service_plan": {
                             "data": {
@@ -581,6 +587,7 @@ describe("cf-local-a unit tests", () => {
                     }
                 }, {
                     "name": serviceNames[3],
+                    type: eServiceTypes.managed,
                     "relationships": {
                         "service_plan": {
                             "data": {
@@ -628,6 +635,128 @@ describe("cf-local-a unit tests", () => {
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             const result = await cfLocal.cfGetServiceInstances({ filters: [{ key: eFilters.space_guids, value: spaceGuid }] });
             expect(result).to.have.lengthOf(0);
+        });
+    });
+
+    describe("cfGetManagedServiceInstances", () => {
+        const spaceGuid = "testSpaceGUID";
+
+        it("ok:: no service instances found", async () => {
+            const query = { filters: [{ key: eFilters.space_guids, value: spaceGuid }], per_page: 11 };
+            const cliResult = {
+                exitCode: 0,
+                error: "",
+                stdout: `{
+                    "resources": []
+                }`
+            };
+            const param = `v3/service_instances?space_guids=${spaceGuid}&fields[service_plan]=guid,name&type=managed&per_page=11`;
+            cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
+            await cfLocal.cfGetManagedServiceInstances(query);
+        });
+    });
+
+    describe("cfGetServiceInstancesList", () => {
+        const configFilePath = cfGetConfigFilePath();
+        const cliResult: CliResult = {
+            stdout: "",
+            stderr: "",
+            exitCode: 0,
+            error: ""
+        };
+        const spaceGuid = "testSpaceGUID";
+        const planName = "test_service_label1";
+        const servicesGuids = ['service-guid-1', 'service-guid-2', 'service-guid-3'];
+        const servicesNames = ['service-1', 'service-2', 'service-3'];
+        const resultPlan = {
+            name: planName,
+            included: {
+                service_offerings: [{
+                    guid: servicesGuids[1],
+                    name: servicesNames[1]
+                },
+                {
+                    guid: servicesGuids[0],
+                    name: servicesNames[0]
+                }]
+            },
+            relationships: {
+                service_offering: {
+                    data: {
+                        guid: servicesGuids[0]
+                    }
+                }
+            }
+        };
+        const planGuids = ['service_plan-guid-1', 'service_plan-guid-3', 'service_plan-guid-2', 'service_plan-guid-4'];
+        const serviceNames = ['test_service_name1', 'test_service_name2', 'test_service_name3', 'test_service_name4'];
+
+        it("ok:: several service plan calls fails -> checking error in service_plan response", async () => {
+            const tags = ["hana", "accounting", "mongodb"];
+            cliResult.exitCode = 0;
+            cliResult.error = "";
+
+            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            const upsGuid = 'ups-guids-0';
+            const cred = { data: { u: 'u', v: 'v' } };
+            const param = `v3/service_instances?fields[service_plan]=guid,name&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            const serviceResult = {
+                "resources": [{
+                    "name": serviceNames[0],
+                    type: eServiceTypes.managed,
+                    "tags": ["hana", "accounting", "mongodb"],
+                    "relationships": {
+                        "service_plan": {
+                            "data": {
+                                "guid": planGuids[0]
+                            }
+                        }
+                    }
+                }, {
+                    "name": serviceNames[1],
+                    tags: ["test"],
+                    guid: upsGuid,
+                    type: eServiceTypes.user_provided,
+                    "relationships": {
+                    }
+                }, {
+                    "name": serviceNames[2],
+                    type: eServiceTypes.managed,
+                    "relationships": {
+                        "service_plan": {
+                            "data": {
+                                "guid": planGuids[1]
+                            }
+                        }
+                    }
+                }]
+            };
+            cliResult.stdout = JSON.stringify(serviceResult);
+            cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
+            cliMock.expects("execute").withExactArgs(["curl", `v3/service_instances/${upsGuid}/credentials`], undefined, undefined).resolves(cred);
+            cliMock.expects("execute").withExactArgs(["curl", `/v3/service_plans/${planGuids[0]}?include=service_offering`], undefined, undefined).resolves({ exitCode: 0, stdout: JSON.stringify(resultPlan) });
+            cliMock.expects("execute").withExactArgs(["curl", `/v3/service_plans/${planGuids[1]}?include=service_offering`], undefined, undefined).resolves({ exitCode: 0, stdout: `{"errors": [{"error": "some error"}]}` });
+            const result = await cfLocal.cfGetServiceInstancesList({
+                filters: [
+                    { key: eFilters.space_guids, value: '' }, { key: eFilters.service_plan_guids, value: '' }
+                ],
+                'per_page': CF_PAGE_SIZE
+            });
+            expect(result).to.have.lengthOf(3);
+            expect(result[0].serviceName).to.be.equal(servicesNames[0]);
+            expect(result[0].plan).to.be.equal(planName);
+            expect(result[0].plan_guid).to.be.equal(planGuids[0]);
+            expect(result[0].label).to.be.equal(serviceNames[0]);
+            assert.deepEqual(result[0].tags, tags);
+            expect(result[1].serviceName).to.be.equal(eServiceTypes.user_provided);
+            expect(result[1].plan).to.be.equal('unknown');
+            expect(result[1].plan_guid).to.be.undefined;
+            expect(result[1].label).to.be.equal(serviceNames[1]);
+            assert.deepEqual(result[1].tags, ['test']);
+            expect(result[2].serviceName).to.be.equal("unknown");
+            expect(result[2].plan).to.be.equal("unknown");
+            expect(result[2].plan_guid).to.be.equal(planGuids[1]);
+            expect(result[2].label).to.be.equal(serviceNames[2]);
         });
     });
 });
