@@ -5,7 +5,7 @@ import * as fsextra from "fs-extra";
 import * as cfLocal from "../src/cf-local";
 import * as cli from "../src/cli";
 import { fail } from "assert";
-import { CliResult, CF_PAGE_SIZE, eFilters } from "../src/types";
+import { CliResult, CF_PAGE_SIZE, eFilters, eServiceTypes } from "../src/types";
 import { stringify, parse } from "comment-json";
 import { messages } from "../src/messages";
 import { cfGetConfigFilePath } from "../src/utils";
@@ -155,11 +155,11 @@ describe("cf-local-b unit tests", () => {
             const expectedOutput = {
                 "resources": [{
                     "name": "test_service_name1",
-                    "type": "user-provided",
+                    "type": eServiceTypes.user_provided,
                     guid: guids[0]
                 }, {
                     "name": "test_service_name2",
-                    "type": "user_provided_service_instance",
+                    "type": eServiceTypes.user_provided,
                     "tags": ["hana", "mongodb"],
                     guid: guids[1]
                 }]

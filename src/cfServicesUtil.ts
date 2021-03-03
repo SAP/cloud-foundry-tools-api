@@ -1,12 +1,12 @@
 import { Cli } from "./cli";
 import * as _ from "lodash";
 import { eFilters, ServiceInstanceInfo } from "./types";
-import { cfGetServiceInstances, cfGetInstanceMetadata, cfGetTarget, cfGetServices, cfGetInstanceKeyParameters } from "./cf-local";
+import { cfGetInstanceMetadata, cfGetTarget, cfGetServices, cfGetInstanceKeyParameters, cfGetManagedServiceInstances } from "./cf-local";
 import { padQuerySpace } from "./utils";
 
 export async function getServicesInstancesFilteredByType(serviceTypes: string[]): Promise<ServiceInstanceInfo[]> {
     const services = await cfGetServices(await padQuerySpace({ 'filters': [{ key: eFilters.names, value: _.join(_.map(serviceTypes, encodeURIComponent)) }] }));
-    return _.size(services) ? cfGetServiceInstances({
+    return _.size(services) ? cfGetManagedServiceInstances({
         'filters': [{ key: eFilters.service_offering_guids, value: _.join(_.map(services, 'guid')) }]
     }) : [];
 }

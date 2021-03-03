@@ -75,7 +75,7 @@ export class Cli {
                 return;
             }
         }
-        resolve({ "stdout": stdout === '\n' ? '' : stdout, "stderr": stderr, exitCode: code });
+        resolve({ "stdout": stdout, "stderr": stderr, exitCode: code });
     }
 
     private static updateSpawnOptions(options: SpawnOptions) {
