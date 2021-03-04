@@ -749,7 +749,7 @@ describe("cf-local-a unit tests", () => {
             expect(result[0].label).to.be.equal(serviceNames[0]);
             assert.deepEqual(result[0].tags, tags);
             expect(result[1].serviceName).to.be.equal(eServiceTypes.user_provided);
-            expect(result[1].plan).to.be.equal('unknown');
+            expect(result[1].plan).to.be.equal('');
             expect(result[1].plan_guid).to.be.undefined;
             expect(result[1].label).to.be.equal(serviceNames[1]);
             assert.deepEqual(result[1].tags, ['test']);

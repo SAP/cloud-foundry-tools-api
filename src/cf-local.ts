@@ -219,7 +219,7 @@ function getServiceInstanceItem(item: any): Promise<any> {
         label: getName(item),
         tags: getTags(item),
         serviceName: isUpsType(item)
-            ? Promise.resolve({ service_offering: { name: eServiceTypes.user_provided } })
+            ? Promise.resolve({ service_offering: { name: eServiceTypes.user_provided }, name: '' })
             : getCachedServicePlan({ guid: planGuid }).then(plan => plan).catch(() => { return {}; }),
         plan_guid: planGuid,
         credentials: isUpsType(item)
@@ -386,7 +386,7 @@ export async function cfGetManagedServiceInstances(query?: IServiceQuery, token?
 export async function cfSetOrgSpace(org: string, space?: string): Promise<void> {
     await execQuery({ query: _.concat(["target", "-o", org], (space ? ["-s", space] : [])) });
     clearCacheServiceInstances();
-    cfGetServiceInstances();
+    cfGetManagedServiceInstances();
 }
 
 export async function cfGetTargets(): Promise<CFTarget[]> {
