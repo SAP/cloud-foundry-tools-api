@@ -7,7 +7,7 @@ import * as cli from "../src/cli";
 import { messages } from "../src/messages";
 import { stringify } from "comment-json";
 import { fail } from "assert";
-import { CliResult, DEFAULT_TARGET, ProgressHandler, CF_PAGE_SIZE, PlanInfo, eFilters, eServiceTypes } from "../src/types";
+import { CliResult, ProgressHandler, CF_PAGE_SIZE, PlanInfo, eFilters, eServiceTypes } from "../src/types";
 import { cfGetConfigFilePath } from "../src/utils";
 
 describe("cf-local unit tests", () => {
@@ -450,70 +450,6 @@ describe("cf-local unit tests", () => {
             } catch (e) {
                 expect(e.message).to.be.equal(messages.service_creation_failed(errorDetail));
             }
-        });
-    });
-
-    describe("cfGetTargets", () => {
-        const cliResult: CliResult = {
-            stdout: "",
-            stderr: "testError",
-            exitCode: 1,
-            error: "testError"
-        };
-
-        it("exception:: targets error", async () => {
-            cliMock.expects("execute").withExactArgs(["targets"], undefined, undefined).resolves(cliResult);
-            try {
-                await cfLocal.cfGetTargets();
-                fail("test should fail");
-            } catch (error) {
-                expect(error.message).to.be.equal(cliResult.error);
-            }
-        });
-
-        it("ok:: no targets have been saved yet", async () => {
-            cliResult.stdout = "test - No targets have been saved yet";
-            cliResult.error = "";
-            cliResult.stderr = '';
-            cliResult.exitCode = 0;
-            cliMock.expects("execute").withExactArgs(["targets"], undefined, undefined).resolves(cliResult);
-            const expectedResult = [{ label: DEFAULT_TARGET, isCurrent: true, isDirty: false }];
-            const result = await cfLocal.cfGetTargets();
-            expect(result).to.be.deep.equal(expectedResult);
-        });
-
-        it("ok:: is not a registered command", async () => {
-            cliResult.stdout = "test - is not a registered command";
-            cliResult.error = "";
-            cliMock.expects("execute").withExactArgs(["targets"], undefined, undefined).resolves(cliResult);
-            const expectedResult = [{ label: DEFAULT_TARGET, isCurrent: true, isDirty: false }];
-            const result = await cfLocal.cfGetTargets();
-            expect(result).to.be.deep.equal(expectedResult);
-        });
-
-        it("ok:: cliResult.stdout is empty string", async () => {
-            cliResult.stdout = "";
-            cliResult.error = "";
-            cliResult.exitCode = 0;
-            cliMock.expects("execute").withExactArgs(["targets"], undefined, undefined).resolves(cliResult);
-            const result = await cfLocal.cfGetTargets();
-            expect(result).to.be.empty;
-        });
-
-        it("ok:: there is '(current' in parentthesisPos", async () => {
-            cliResult.stdout = "test modified (current  test";
-            cliResult.error = "";
-            cliMock.expects("execute").withExactArgs(["targets"], undefined, undefined).resolves(cliResult);
-            const result = await cfLocal.cfGetTargets();
-            expect(result).to.be.deep.equal([{ label: "test modified", isCurrent: true, isDirty: true }]);
-        });
-
-        it("ok:: no '(current' in parentthesisPos", async () => {
-            cliResult.stdout = "test substring";
-            cliResult.error = "";
-            cliMock.expects("execute").withExactArgs(["targets"], undefined, undefined).resolves(cliResult);
-            const result = await cfLocal.cfGetTargets();
-            expect(result).to.be.deep.equal([{ label: cliResult.stdout, isCurrent: false, isDirty: false }]);
         });
     });
 

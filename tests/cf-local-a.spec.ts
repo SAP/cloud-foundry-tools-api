@@ -345,19 +345,29 @@ describe("cf-local-a unit tests", () => {
     });
 
     describe("cfGetServicePlans scope", () => {
-        const servicePlanUrl = "testServicePlanUrl";
-        const testArgs = ["curl", servicePlanUrl];
         const cliResult: CliResult = {
             stdout: "",
             stderr: "",
             exitCode: 0,
             error: ""
         };
+        const targetResult = {
+            stdout: `"Api endpoint:   https://api.example.org"
+            "Api version:    2.146.0"
+            "user:           bag023"
+            `,
+            stderr: '',
+            exitCode: 0
+        };
+        beforeEach(() => {
+            cliMock.expects("execute").withExactArgs(["target"], { env: { "CF_COLOR": "false" } }, undefined).resolves(targetResult);
+        });
 
         it("fail:: exitCode is not 0", async () => {
             cliResult.error = "some error";
             cliResult.exitCode = 1;
-            cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
+            const servicePlanUrl = "https://api.example.org/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac";
+            cliMock.expects("execute").withExactArgs(["curl", '/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac'], undefined, undefined).resolves(cliResult);
             try {
                 await cfLocal.cfGetServicePlans(servicePlanUrl);
                 fail("test should fail");
@@ -369,7 +379,8 @@ describe("cf-local-a unit tests", () => {
         it("ok:: exitCode is 0, but there are no services found by requested plan url", async () => {
             cliResult.stdout = "{}";
             cliResult.exitCode = 0;
-            cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
+            const servicePlanUrl = "/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac";
+            cliMock.expects("execute").withExactArgs(["curl", servicePlanUrl], undefined, undefined).resolves(cliResult);
             const servicePlan = await cfLocal.cfGetServicePlans(servicePlanUrl);
             expect(_.size(servicePlan)).to.be.equal(0);
         });
@@ -382,8 +393,9 @@ describe("cf-local-a unit tests", () => {
                     "guid": "1"
                 }]
             }`;
+            const servicePlanUrl = "https://api.example.org/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac";
             cliResult.exitCode = 0;
-            cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
+            cliMock.expects("execute").withExactArgs(["curl", '/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac'], undefined, undefined).resolves(cliResult);
             const servicePlan = await cfLocal.cfGetServicePlans(servicePlanUrl);
             assert.deepEqual(_.first(servicePlan), { label: 'name_1', description: 'description_1', guid: '1' });
         });

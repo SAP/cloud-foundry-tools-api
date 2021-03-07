@@ -434,12 +434,6 @@ export async function cfGetSpaceServices(query?: IServiceQuery, spaceGUID?: stri
     return cfGetServices(padQuery(query, [{ key: eFilters.space_guids, value: spaceGUID }]), cancellationToken);
 }
 
-export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
-    return execTotal({ query: servicePlansUrl }, (data: any) => {
-        return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
-    });
-}
-
 /**
  * * Example of usage : cf bind-local -path .env -service-names serviceName1 serviceName2 -service-keys serviceKeys1 serviceKeys2 -tags tagsValue1 tagsValue2 -params {\"permissions\":[\"development\"]}
  * 
@@ -520,10 +514,16 @@ export async function cfGetTarget(weak?: boolean): Promise<ITarget> {
         item = _.replace(_.trim(item), /^['"]|['"]$/g, '');
         const sep = _.indexOf(item, ':');
         if (sep > -1) {
-            result[`${_.trim(_.join(_.slice(item, 0, sep), ''))}`] = _.trim(_.join(_.slice(item, sep + 1), ''));
+            result[`${_.toLower(_.trim(_.join(_.slice(item, 0, sep), '')))}`] = _.trim(_.join(_.slice(item, sep + 1), ''));
         }
     });
     return result;
+}
+
+export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
+    return execTotal({ query: _.replace(servicePlansUrl, (await cfGetTarget(true))["api endpoint"], '') }, (data: any) => {
+        return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
+    });
 }
 
 export async function cfLogout() {
