@@ -11,10 +11,12 @@ This package provides a set of APIs to help you develop applications in Cloud Fo
 
 ## Prerequisite
 
-_from version_ ***v1.0.0*** _and above_
+_from version_ `v1.0.0` _and above_:
+
 Make sure you have installed the CF CLI [v7](https://github.com/cloudfoundry/cli/blob/master/doc/installation-instructions/installation-instructions-v7.md#installers-and-compressed-binaries) tool in your environment.
 
-_below version_ ***v1.0.0***
+_below version_ `v1.0.0`:
+
 Make sure you have installed the CF CLI [v6](https://github.com/cloudfoundry/cli/blob/master/doc/installation-instructions/installation-instructions-v6.md#installers-and-compressed-binaries) tool in your environment.
 
 ## Examples of usage

@@ -5,7 +5,7 @@ import * as os from "os";
 import { fail } from "assert";
 import { stringify } from "comment-json";
 import * as utils from "../src/utils";
-import { eFilters, CF_PAGE_SIZE } from "../src/types";
+import { eFilters, CF_PAGE_SIZE, eServiceTypes } from "../src/types";
 import { messages } from "../src/messages";
 
 describe("Util unit tests", () => {
@@ -154,6 +154,16 @@ describe("Util unit tests", () => {
 
         it("getGuid:: incorrect structure", () => {
             expect(utils.getGuid({ abel: 'name' })).be.equal('');
+        });
+
+        it("isUpsType:: correct structure", () => {
+            expect(utils.isUpsType({ type: eServiceTypes.user_provided })).to.be.true;
+            expect(utils.isUpsType({ type: 'other' })).to.be.false;
+        });
+        
+        it("isUpsType:: incorrect structure", () => {
+            expect(utils.isUpsType({ typ: eServiceTypes.user_provided })).to.be.false;
+            expect(utils.isUpsType(undefined)).to.be.false;
         });
 
         it("getSpaceFieldGUID:: correct structure", () => {

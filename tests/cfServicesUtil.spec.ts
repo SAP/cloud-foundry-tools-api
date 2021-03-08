@@ -37,13 +37,13 @@ describe('services unit package tests', () => {
 
     describe("getServicesInstancesFilteredByType", () => {
         const spaceGuid = 'space-d2ff128b-e2a8-25f7-828a-24be6173db7b';
-        
+
         beforeEach(() => {
             fsExtraMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields": {
                 "GUID": "${spaceGuid}"
             }}`);
         });
-        
+
         const types = ['saas-registry', 'audolog'];
         const services: ServiceInfo[] = [{
             description: 'description1',
@@ -57,15 +57,16 @@ describe('services unit package tests', () => {
             service_plans_url: '/v2/services/d2ff128b-s1a8-45f7-828a-24be6173db7b/service_plans'
         }];
         const instances: ServiceInstanceInfo[] = [{ label: "label1", serviceName: types[1] }, { label: "label3", serviceName: types[0] }];
-        const query = { 'filters': [{ key: eFilters.names, value: _.join(_.map(types, encodeURIComponent)) }, {key: eFilters.space_guids, value: spaceGuid}], per_page: CF_PAGE_SIZE };
-        
+        const query = { 'filters': [{ key: eFilters.names, value: _.join(_.map(types, encodeURIComponent)) }, { key: eFilters.space_guids, value: spaceGuid }], per_page: CF_PAGE_SIZE };
+
         it("ok:: verify query parameters", async () => {
             mockCfLocal.expects("cfGetServices").withExactArgs(query).resolves(services);
-            const servicesQuery = {'filters': [{
+            const servicesQuery = {
+                'filters': [{
                     key: eFilters.service_offering_guids, value: _.join(_.map(services, 'guid'))
                 }]
             };
-            mockCfLocal.expects("cfGetServiceInstances").withExactArgs(servicesQuery).resolves(instances);
+            mockCfLocal.expects("cfGetManagedServiceInstances").withExactArgs(servicesQuery).resolves(instances);
             assert.deepEqual(_.map(await getServicesInstancesFilteredByType(types), 'label'), [instances[0].label, instances[1].label]);
         });
 
@@ -75,16 +76,16 @@ describe('services unit package tests', () => {
         });
 
         it("ok:: undefined services requested", async () => {
-            const query = { 'filters': [{ key: eFilters.names, value: _.join(_.map(null, encodeURIComponent)) }, {key: eFilters.space_guids, value: spaceGuid}], per_page: CF_PAGE_SIZE };
+            const query = { 'filters': [{ key: eFilters.names, value: _.join(_.map(null, encodeURIComponent)) }, { key: eFilters.space_guids, value: spaceGuid }], per_page: CF_PAGE_SIZE };
             mockCfLocal.expects("cfGetServices").withExactArgs(query).resolves([]);
             expect(_.size(await getServicesInstancesFilteredByType(null))).to.be.equal(0);
         });
 
-        it("exception:: cfGetServiceInstances throws error", async () => {
-            const query = { 'filters': [{ key: eFilters.names, value: _.join(_.map(types, encodeURIComponent)) }, {key: eFilters.space_guids, value: spaceGuid}], per_page: CF_PAGE_SIZE };
+        it("exception:: cfGetManagedServiceInstances throws error", async () => {
+            const query = { 'filters': [{ key: eFilters.names, value: _.join(_.map(types, encodeURIComponent)) }, { key: eFilters.space_guids, value: spaceGuid }], per_page: CF_PAGE_SIZE };
             mockCfLocal.expects("cfGetServices").withExactArgs(query).resolves(services);
-            const error = new Error("cfGetServiceInstances failed");
-            mockCfLocal.expects("cfGetServiceInstances").throws(error);
+            const error = new Error("cfGetManagedServiceInstances failed");
+            mockCfLocal.expects("cfGetManagedServiceInstances").throws(error);
             try {
                 await getServicesInstancesFilteredByType(types);
                 fail("should fail");
