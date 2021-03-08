@@ -6,7 +6,7 @@ import {
     ProgressHandler, CliResult, CFResource, CancellationToken, CFTarget, ServiceInstanceInfo, ServiceInfo, PlanInfo,
     DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget, UpsTypeInfo, eServiceTypes
 } from './types';
-import { ensureQuery, getDescription, getGuid, getLabel, getName, getOrgGUID, getSpaceGuidThrowIfUndefined, getTags, padQuery, padQuerySpace } from "./utils";
+import { ensureQuery, getDescription, getGuid, getLabel, getName, getOrgGUID, getSpaceGuidThrowIfUndefined, getTags, isUpsType, padQuery, padQuerySpace } from "./utils";
 import { SpawnOptions } from "child_process";
 
 const baseParams = [
@@ -190,6 +190,66 @@ async function getUpsCredentials(instanceGuid: string, token?: CancellationToken
     return execQuery({ query: ['curl', `v3/service_instances/${instanceGuid}/credentials`], token }, (data: any) => data);
 }
 
+function resolveCfResource(data: CFResource, service: CFResource) {
+    return _.merge({
+        name: getName(data),
+        guid: getGuid(data),
+        description: getDescription(data)
+    }, service ? {
+        service_offering: {
+            guid: getGuid(service),
+            description: getDescription(service),
+            name: getName(service)
+        }
+    } : {});
+}
+
+function getCachedServicePlan(plan: any): Promise<CFResource> {
+    if (!cacheServiceInstanceTypes[plan.guid]) {
+        cacheServiceInstanceTypes[plan.guid] = execQuery({ query: ['curl', `/v3/service_plans/${plan.guid}?include=service_offering`] }, (data: any) => {
+            return Promise.resolve(resolveCfResource(data, _.find(_.get(data, ['included', 'service_offerings']), ['guid', _.get(data, ['relationships', 'service_offering', 'data', 'guid'])])));
+        });
+    }
+    return cacheServiceInstanceTypes[plan.guid];
+}
+
+function getServiceInstanceItem(item: any): Promise<any> {
+    const planGuid = _.get(item, ['relationships', 'service_plan', 'data', 'guid']);
+    return Promise.resolve({
+        label: getName(item),
+        tags: getTags(item),
+        serviceName: isUpsType(item)
+            ? Promise.resolve({ service_offering: { name: eServiceTypes.user_provided }, name: '' })
+            : getCachedServicePlan({ guid: planGuid }).then(plan => plan).catch(() => { return {}; }),
+        plan_guid: planGuid,
+        credentials: isUpsType(item)
+            ? getUpsCredentials(getGuid(item)).then(data => data).catch(() => { return {}; })
+            : Promise.resolve()
+    });
+}
+
+async function resolveServiceInstances(results: any): Promise<ServiceInstanceInfo[]> {
+    const queries = _.concat(_.map(results, 'serviceName'), _.map(results, 'credentials'));
+    if (!_.size(queries)) { // sapjira issue DEVXBUGS-7773
+        return [];
+    }
+    return Promise.all(queries).then(async () => {
+        const instances: ServiceInstanceInfo[] = [];
+        for (const result of results) {
+            const serviceName = await _.get(result, 'serviceName');
+            instances.push({
+                label: getLabel(result),
+                serviceName: _.get(serviceName, ['service_offering', 'name'], 'unknown'),
+                plan_guid: _.get(result, 'plan_guid'),
+                plan: _.get(serviceName, 'name', 'unknown'),
+                tags: _.get(result, 'tags'),
+                credentials: await result.credentials
+            });
+        }
+        return _.compact(instances);
+    });
+}
+
 /**
  * Returning User-provided-services instances
  * 
@@ -199,24 +259,9 @@ async function getUpsCredentials(instanceGuid: string, token?: CancellationToken
 export async function cfGetUpsInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
     evaluateQueryFilters(query, resourceServiceInstances);
     query = await padQuerySpace(query, [{ key: eFilters.type, value: eServiceTypes.user_provided }]);
-    const results = await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, async (info: any): Promise<ServiceInstanceInfo> => {
-        return Promise.resolve({
-            label: getName(info),
-            serviceName: eServiceTypes.user_provided,
-            tags: getTags(info),
-            credentials: getUpsCredentials(getGuid(info)).then(data => data).catch(() => { return {}; })
-        });
-    });
-    const queries = _.map(results, 'credentials');
-    if (!_.size(queries)) {
-        return [];
-    }
-    return Promise.all(queries).then(async () => {
-        for (const instance of results) {
-            instance.credentials = await instance.credentials;
-        }
-        return _.compact(results);
-    });
+    return resolveServiceInstances(
+        await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, async (info: any): Promise<ServiceInstanceInfo> => getServiceInstanceItem(info))
+    );
 }
 
 export async function cfCreateService(
@@ -240,7 +285,7 @@ export async function cfCreateService(
 
     const query = { filters: [{ key: eFilters.names, value: encodeURIComponent(instanceName) }, { key: eFilters.space_guids, value: spaceGuid }] };
     return new Promise<CFResource>((resolve, reject) => {
-        waitForEntity(resolve, reject, result ? parse(result) : result, 0, maxNumberOfAttemps, () => getServiceInstance(query, progress.cancelToken), progress);
+        waitForEntity(resolve, reject, !_.isEmpty(_.replace(result, '\n', '')) ? parse(result) : result, 0, maxNumberOfAttemps, () => getServiceInstance(query, progress.cancelToken), progress);
     });
 }
 
@@ -318,70 +363,30 @@ export async function cfGetServicePlansList(query?: IServiceQuery, token?: Cance
     });
 }
 
-function resolveCfResource(data: CFResource, service: CFResource) {
-    return _.merge({
-        name: getName(data),
-        guid: getGuid(data),
-        description: getDescription(data)
-    }, service ? {
-        service_offering: {
-            guid: getGuid(service),
-            description: getDescription(service),
-            name: getName(service)
-        }
-    } : {});
-}
-
-function getCachedServicePlan(plan: any): Promise<CFResource> {
-    if (!cacheServiceInstanceTypes[plan.guid]) {
-        cacheServiceInstanceTypes[plan.guid] = execQuery({ query: ['curl', `/v3/service_plans/${plan.guid}?include=service_offering`] }, (data: any) => {
-            return Promise.resolve(resolveCfResource(data, _.find(_.get(data, ['included', 'service_offerings']), ['guid', _.get(data, ['relationships', 'service_offering', 'data', 'guid'])])));
-        });
-    }
-    return cacheServiceInstanceTypes[plan.guid];
-}
-
+/**
+ * @deprecated use cfGetManagedServiceInstances instead of
+ * @param query 
+ * @param token (optional)
+ */
 export async function cfGetServiceInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
     query = await padQuerySpace(query, [
         { key: eFilters.service_plan, value: 'guid,name', op: eOperation.fields },
         { key: eFilters.type, value: eServiceTypes.managed }
     ]);
     evaluateQueryFilters(query, resourceServiceInstances);
-    const results = await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => {
-        const planGuid = _.get(info, ['relationships', 'service_plan', 'data', 'guid']);
-        return Promise.resolve({
-            label: getName(info),
-            serviceName: getCachedServicePlan({ guid: planGuid }).then(plan => plan).catch(() => { return {}; }),
-            plan_guid: planGuid,
-            tags: getTags(info)
-        });
-    });
+    return resolveServiceInstances(
+        await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => getServiceInstanceItem(info))
+    );
+}
 
-    const plans = _.map(results, 'serviceName');
-    if (!_.size(plans)) { // sapjira issue DEVXBUGS-7773
-        return [];
-    }
-    return Promise.race(plans).then(async () => {
-        const instances: ServiceInstanceInfo[] = [];
-        for (const instance of results) {
-            const plan = await _.get(instance, 'serviceName');
-            instances.push({
-                label: getLabel(instance),
-                serviceName: _.get(plan, ['service_offering', 'name'], 'unknown'),
-                plan_guid: _.get(instance, 'plan_guid'),
-                plan: _.get(plan, 'name', 'unknown'),
-                tags: _.get(instance, 'tags'),
-                credentials: _.get(instance, 'credentials')
-            });
-        }
-        return _.compact(instances);
-    });
+export async function cfGetManagedServiceInstances(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
+    return cfGetServiceInstances(query, token);
 }
 
 export async function cfSetOrgSpace(org: string, space?: string): Promise<void> {
     await execQuery({ query: _.concat(["target", "-o", org], (space ? ["-s", space] : [])) });
     clearCacheServiceInstances();
-    cfGetServiceInstances();
+    cfGetManagedServiceInstances();
 }
 
 export async function cfGetTargets(): Promise<CFTarget[]> {
@@ -427,12 +432,6 @@ export async function cfGetSpaceServices(query?: IServiceQuery, spaceGUID?: stri
     // Use filter functionality and exceptions to get the current space GUID. 
     // We can access [0] because it is the only filter returned
     return cfGetServices(padQuery(query, [{ key: eFilters.space_guids, value: spaceGUID }]), cancellationToken);
-}
-
-export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
-    return execTotal({ query: servicePlansUrl }, (data: any) => {
-        return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
-    });
 }
 
 /**
@@ -515,10 +514,16 @@ export async function cfGetTarget(weak?: boolean): Promise<ITarget> {
         item = _.replace(_.trim(item), /^['"]|['"]$/g, '');
         const sep = _.indexOf(item, ':');
         if (sep > -1) {
-            result[`${_.trim(_.join(_.slice(item, 0, sep), ''))}`] = _.trim(_.join(_.slice(item, sep + 1), ''));
+            result[`${_.toLower(_.trim(_.join(_.slice(item, 0, sep), '')))}`] = _.trim(_.join(_.slice(item, sep + 1), ''));
         }
     });
     return result;
+}
+
+export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
+    return execTotal({ query: _.replace(servicePlansUrl, (await cfGetTarget(true))["api endpoint"], '') }, (data: any) => {
+        return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
+    });
 }
 
 export async function cfLogout() {
@@ -548,4 +553,12 @@ export async function cfGetInstanceKeyParameters(instanceName: string): Promise<
     }
     return execQuery({ query: ['curl', `/v3/service_credential_bindings/${getGuid(_.head(keys))}/details`] }, (data: any) => data)
         .then(data => data).catch(() => { return {}; });
-} 
+}
+
+export async function cfGetServiceInstancesList(query?: IServiceQuery, token?: CancellationToken): Promise<ServiceInstanceInfo[]> {
+    query = await padQuerySpace(query, [{ key: eFilters.service_plan, value: 'guid,name', op: eOperation.fields }]);
+    evaluateQueryFilters(query, resourceServiceInstances);
+    return resolveServiceInstances(
+        await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => getServiceInstanceItem(info))
+    );
+}

@@ -4,7 +4,7 @@ import * as fsextra from "fs-extra";
 import * as path from "path";
 import { parse } from "comment-json";
 import { messages } from "./messages";
-import { IServiceQuery, CF_PAGE_SIZE, IServiceFilters, eFilters } from "./types";
+import { IServiceQuery, CF_PAGE_SIZE, IServiceFilters, eFilters, eServiceTypes } from "./types";
 
 export async function dataContentAsObject(filePath: string) {
     try {
@@ -70,6 +70,10 @@ export function getTags(resource: any): string[] {
 
 export function cfGetConfigFilePath(): string {
     return path.join(_.get(process, "env.CF_HOME", os.homedir()), ".cf", "config.json");
+}
+
+export function isUpsType(resource: any): boolean {
+    return _.get(resource, "type", eServiceTypes.managed) === eServiceTypes.user_provided;
 }
 
 export async function cfGetConfigFileField(field: string): Promise<any> {
