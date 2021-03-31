@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { expect, assert } from "chai";
 import * as fsextra from "fs-extra";
 import * as sinon from "sinon";
@@ -9,8 +11,8 @@ import { eFilters, CF_PAGE_SIZE, eServiceTypes } from "../src/types";
 import { messages } from "../src/messages";
 
 describe("Util unit tests", () => {
-    let sandbox: any;
-    let fsextraMock: any;
+    let sandbox: sinon.SinonSandbox;
+    let fsextraMock: sinon.SinonMock;
 
     before(() => {
         sandbox = sinon.createSandbox();

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as _ from "lodash";
 import * as sinon from "sinon";
 import * as fsextra from "fs-extra";
@@ -10,10 +11,10 @@ import { fail } from "assert";
 import { cfGetConfigFilePath } from "../src/utils";
 
 describe('services unit package tests', () => {
-    let sandbox: any;
-    let mockCfLocal: any;
-    let mockCli: any;
-    let fsExtraMock: any;
+    let sandbox: sinon.SinonSandbox;
+    let mockCfLocal: sinon.SinonMock;
+    let mockCli: sinon.SinonMock;
+    let fsExtraMock: sinon.SinonMock;
 
     before(() => {
         sandbox = sinon.createSandbox();

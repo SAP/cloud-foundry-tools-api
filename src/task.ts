@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import * as fsextra from "fs-extra";
 import * as path from "path";
 import * as _ from "lodash";
@@ -16,7 +21,7 @@ async function getTaskJsonContentAsJsonObject(taskJsonFilePath: string): Promise
     }
 }
 
-export async function saveTaskConfiguration(wsFolderPath: string, configuration: any) {
+export async function saveTaskConfiguration(wsFolderPath: string, configuration: any): Promise<void> {
     const taskJsonFilePath = path.join(wsFolderPath, ".vscode", "tasks.json");
     const tasksJson = await getTaskJsonContentAsJsonObject(taskJsonFilePath);
 

@@ -1,3 +1,9 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { parse, stringify } from "comment-json";
 import * as _ from "lodash";
 import { Cli } from "./cli";
@@ -8,6 +14,7 @@ import {
 } from './types';
 import { ensureQuery, getDescription, getGuid, getLabel, getName, getOrgGUID, getSpaceGuidThrowIfUndefined, getTags, isUpsType, padQuery, padQuerySpace } from "./utils";
 import { SpawnOptions } from "child_process";
+import { URL } from "url";
 
 const baseParams = [
     eFilters.page, eFilters.per_page, eFilters.oder_by, eFilters.label_selector, eFilters.created_ats, eFilters.updated_ats
@@ -59,15 +66,29 @@ const resourceServiceCredentialsBinding: ResourceFilters = {
     ]))
 };
 
-function evaluateResponse(data: any) {
-    if (_.size(data.errors)) {
-        throw new Error(`${data.errors[0].detail} [code: ${data.errors[0].code} title: ${data.errors[0].title}]`);
+const resourceApps: ResourceFilters = {
+    name: "apps",
+    params: _.uniq(_.concat(baseParams, [eFilters.names, eFilters.space_guids, eFilters.organization_guids, eFilters.guids, eFilters.include]))
+};
+
+function evaluateResponse(data: any): any {
+    if (_.size(_.get(data, 'errors'))) {
+        throw new Error(`${_.get(data, ['errors', '0', 'detail'])} [code: ${_.get(data, ['errors', '0', 'code'])} title: ${_.get(data, ['errors', '0', 'title'])}]`);
     }
     return data;
 }
 
+export async function resolveEndpoint(query: string): Promise<string> {
+    try {
+        return /http/.test(new URL(query).protocol) ? _.replace(query, (await cfGetTarget(true))["api endpoint"], '') : query;
+    } catch (e) {
+        // TypeError - query is in invalid format
+        return query;
+    }
+}
+
 let cacheServiceInstanceTypes: any = {};
-export function clearCacheServiceInstances() {
+export function clearCacheServiceInstances(): void {
     cacheServiceInstanceTypes = {};
 }
 
@@ -162,7 +183,7 @@ async function execTotal(args: { query: string; options?: SpawnOptions; token?: 
     const collection: any = [];
     let query = args.query;
     while (query) {
-        const result = parse(await execQuery({ query: ["curl", query], options: args.options, token: args.token }));
+        const result = parse(await execQuery({ query: ["curl", await resolveEndpoint(query)], options: args.options, token: args.token }));
         for (const resource of _.get(result, "resources", [])) {
             collection.push(fncParse ? await fncParse(resource, _.get(result, "included")) : resource);
         }
@@ -187,7 +208,7 @@ async function getServiceInstance(query: IServiceQuery, token?: CancellationToke
 }
 
 async function getUpsCredentials(instanceGuid: string, token?: CancellationToken): Promise<any[]> {
-    return execQuery({ query: ['curl', `v3/service_instances/${instanceGuid}/credentials`], token }, (data: any) => data);
+    return execQuery({ query: ['curl', `/v3/service_instances/${instanceGuid}/credentials`], token }, (data: any) => data);
 }
 
 function resolveCfResource(data: CFResource, service: CFResource) {
@@ -260,7 +281,7 @@ export async function cfGetUpsInstances(query?: IServiceQuery, token?: Cancellat
     evaluateQueryFilters(query, resourceServiceInstances);
     query = await padQuerySpace(query, [{ key: eFilters.type, value: eServiceTypes.user_provided }]);
     return resolveServiceInstances(
-        await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, async (info: any): Promise<ServiceInstanceInfo> => getServiceInstanceItem(info))
+        await execTotal({ query: `/v3/service_instances?${composeQuery(query)}`, token }, async (info: any): Promise<ServiceInstanceInfo> => getServiceInstanceItem(info))
     );
 }
 
@@ -375,7 +396,7 @@ export async function cfGetServiceInstances(query?: IServiceQuery, token?: Cance
     ]);
     evaluateQueryFilters(query, resourceServiceInstances);
     return resolveServiceInstances(
-        await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => getServiceInstanceItem(info))
+        await execTotal({ query: `/v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => getServiceInstanceItem(info))
     );
 }
 
@@ -386,7 +407,7 @@ export async function cfGetManagedServiceInstances(query?: IServiceQuery, token?
 export async function cfSetOrgSpace(org: string, space?: string): Promise<void> {
     await execQuery({ query: _.concat(["target", "-o", org], (space ? ["-s", space] : [])) });
     clearCacheServiceInstances();
-    cfGetManagedServiceInstances();
+    void cfGetManagedServiceInstances();
 }
 
 export async function cfGetTargets(): Promise<CFTarget[]> {
@@ -521,12 +542,12 @@ export async function cfGetTarget(weak?: boolean): Promise<ITarget> {
 }
 
 export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
-    return execTotal({ query: _.replace(servicePlansUrl, (await cfGetTarget(true))["api endpoint"], '') }, (data: any) => {
+    return execTotal({ query: servicePlansUrl }, (data: any) => {
         return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
     });
 }
 
-export async function cfLogout() {
+export async function cfLogout(): Promise<void> {
     await execQuery({ query: ["logout"] });
 }
 
@@ -559,6 +580,11 @@ export async function cfGetServiceInstancesList(query?: IServiceQuery, token?: C
     query = await padQuerySpace(query, [{ key: eFilters.service_plan, value: 'guid,name', op: eOperation.fields }]);
     evaluateQueryFilters(query, resourceServiceInstances);
     return resolveServiceInstances(
-        await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => getServiceInstanceItem(info))
+        await execTotal({ query: `/v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => getServiceInstanceItem(info))
     );
+}
+
+export async function cfGetApps(query?: IServiceQuery, token?: CancellationToken): Promise<any> {
+    evaluateQueryFilters(query, resourceApps);
+    return execTotal({ query: `/v3/apps?${composeQuery(await padQuerySpace(query))}`, token });
 }

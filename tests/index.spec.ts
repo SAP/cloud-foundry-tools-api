@@ -4,8 +4,8 @@ import * as serviceUtils from "../src/cfServicesUtil";
 import * as sinon from "sinon";
 
 describe("index package test", () => {
-    let sandbox: any;
-    let mockServiceUtils: any;
+    let sandbox: sinon.SinonSandbox;
+    let mockServiceUtils: sinon.SinonMock;
 
 
     before(() => {

@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { SpawnOptions, spawn } from 'child_process';
 import { parse } from "comment-json";
 import * as _ from "lodash";

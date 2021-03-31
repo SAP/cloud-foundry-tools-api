@@ -1,11 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { expect } from "chai";
 import * as childProcess from 'child_process';
 import * as sinon from "sinon";
 import { Cli } from "../src/cli";
 
 describe("cli unit tests", () => {
-    let sandbox: any;
-    let childProcessMock: any;
+    let sandbox: sinon.SinonSandbox;
+    let childProcessMock: sinon.SinonMock;
     const token = { isCancellationRequested: false, onCancellationRequested: () => { return; } };
     const execResult = {
         kill: () => { return; },

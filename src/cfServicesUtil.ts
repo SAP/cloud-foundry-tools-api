@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { Cli } from "./cli";
 import * as _ from "lodash";
 import { eFilters, ServiceInstanceInfo } from "./types";
@@ -18,8 +19,7 @@ export function getInstanceCredentials(instanceName: string): Promise<any> {
     return cfGetInstanceKeyParameters(instanceName);
 }
 
-export function createServiceInstance(serviceType: string, servicePlan: string, serviceInstanceName: string,
-    config?: any): Promise<any> {
+export function createServiceInstance(serviceType: string, servicePlan: string, serviceInstanceName: string, config?: any): Promise<any> {
     let args = ["create-service", serviceType, servicePlan, serviceInstanceName];
     if (config) {
         args = args.concat(["-c", config]);

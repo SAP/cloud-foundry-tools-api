@@ -6,8 +6,8 @@ import { saveTaskConfiguration } from "../src/task";
 
 
 describe('task unit tests', () => {
-    let sandbox: any;
-    let fsextraMock: any;
+    let sandbox: sinon.SinonSandbox;
+    let fsextraMock: sinon.SinonMock;
 
     before(() => {
         sandbox = sinon.createSandbox();

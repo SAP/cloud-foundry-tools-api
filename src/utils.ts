@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import * as _ from "lodash";
 import * as os from "os";
 import * as fsextra from "fs-extra";
@@ -6,7 +10,7 @@ import { parse } from "comment-json";
 import { messages } from "./messages";
 import { IServiceQuery, CF_PAGE_SIZE, IServiceFilters, eFilters, eServiceTypes } from "./types";
 
-export async function dataContentAsObject(filePath: string) {
+export async function dataContentAsObject(filePath: string): Promise<any> {
     try {
         return _.reduce(_.split(await fsextra.readFile(filePath, "utf8"), os.EOL), (data: any, line: string) => {
             const parts = _.split(line, '=');
