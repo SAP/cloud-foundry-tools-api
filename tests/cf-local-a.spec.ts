@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { expect, assert } from "chai";
 import * as _ from "lodash";
-import * as sinon from "sinon";
+import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import * as fsextra from "fs-extra";
 import * as cfLocal from "../src/cf-local";
 import * as cli from "../src/cli";
@@ -10,15 +11,15 @@ import { CliResult, CF_PAGE_SIZE, OK, eFilters, eOperation, eServiceTypes } from
 import { cfGetConfigFilePath } from "../src/utils";
 
 describe("cf-local-a unit tests", () => {
-    let sandbox: any;
-    let cliMock: any;
-    let fsExtraMock: any;
+    let sandbox: SinonSandbox;
+    let cliMock: SinonMock;
+    let fsExtraMock: SinonMock;
     const testEndpoint = `https://api.cf.sap.hana.ondemand.com`;
     const testUserEmail = "user@test.com";
     const testUserPassword = "userPassword";
 
     before(() => {
-        sandbox = sinon.createSandbox();
+        sandbox = createSandbox();
     });
 
     after(() => {
@@ -359,14 +360,12 @@ describe("cf-local-a unit tests", () => {
             stderr: '',
             exitCode: 0
         };
-        beforeEach(() => {
-            cliMock.expects("execute").withExactArgs(["target"], { env: { "CF_COLOR": "false" } }, undefined).resolves(targetResult);
-        });
+        const servicePlanUrl = "https://api.example.org/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac";
 
         it("fail:: exitCode is not 0", async () => {
             cliResult.error = "some error";
             cliResult.exitCode = 1;
-            const servicePlanUrl = "https://api.example.org/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac";
+            cliMock.expects("execute").withExactArgs(["target"], { env: { "CF_COLOR": "false" } }, undefined).resolves(targetResult);
             cliMock.expects("execute").withExactArgs(["curl", '/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac'], undefined, undefined).resolves(cliResult);
             try {
                 await cfLocal.cfGetServicePlans(servicePlanUrl);
@@ -379,9 +378,8 @@ describe("cf-local-a unit tests", () => {
         it("ok:: exitCode is 0, but there are no services found by requested plan url", async () => {
             cliResult.stdout = "{}";
             cliResult.exitCode = 0;
-            const servicePlanUrl = "/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac";
-            cliMock.expects("execute").withExactArgs(["curl", servicePlanUrl], undefined, undefined).resolves(cliResult);
-            const servicePlan = await cfLocal.cfGetServicePlans(servicePlanUrl);
+            cliMock.expects("execute").withExactArgs(["curl", '/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac'], undefined, undefined).resolves(cliResult);
+            const servicePlan = await cfLocal.cfGetServicePlans('/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac');
             expect(_.size(servicePlan)).to.be.equal(0);
         });
 
@@ -393,11 +391,20 @@ describe("cf-local-a unit tests", () => {
                     "guid": "1"
                 }]
             }`;
-            const servicePlanUrl = "https://api.example.org/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac";
             cliResult.exitCode = 0;
+            cliMock.expects("execute").withExactArgs(["target"], { env: { "CF_COLOR": "false" } }, undefined).resolves(targetResult);
             cliMock.expects("execute").withExactArgs(["curl", '/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac'], undefined, undefined).resolves(cliResult);
             const servicePlan = await cfLocal.cfGetServicePlans(servicePlanUrl);
             assert.deepEqual(_.first(servicePlan), { label: 'name_1', description: 'description_1', guid: '1' });
+        });
+
+        it("ok:: requested plan url is not in https(s) format", async () => {
+            cliResult.stdout = "{}";
+            cliResult.exitCode = 0;
+            const servicePlanUrl = 'file:////server/folder/v3/service_plans/5358d122-638e-11ea-afca-bf6e756684ac';
+            cliMock.expects("execute").withExactArgs(["curl", servicePlanUrl], undefined, undefined).resolves(cliResult);
+            const servicePlan = await cfLocal.cfGetServicePlans(servicePlanUrl);
+            expect(_.size(servicePlan)).to.be.equal(0);
         });
     });
 
@@ -451,7 +458,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.error = "testError";
             cliResult.stdout = "";
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
-            const param = `v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
                 await cfLocal.cfGetServiceInstances();
@@ -467,7 +474,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "testStdout";
             const timestamp = '2020-06-30T23:49:04Z';
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
-            const param = `v3/service_instances?created_ats[gte]=${timestamp}&fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            const param = `/v3/service_instances?created_ats[gte]=${timestamp}&fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
                 await cfLocal.cfGetServiceInstances({ filters: [{ key: eFilters.created_ats, value: timestamp, op: eOperation.gte }] });
@@ -482,7 +489,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.error = "testError";
             cliResult.stdout = "";
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
-            const param = `v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&page=5&per_page=${CF_PAGE_SIZE}`;
+            const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&page=5&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
                 await cfLocal.cfGetServiceInstances({ page: 5 });
@@ -498,7 +505,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.error = "";
 
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
-            const param = `v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             const plansResult = {
                 "resources": [{
                     "name": serviceNames[0],
@@ -611,7 +618,7 @@ describe("cf-local-a unit tests", () => {
             };
             cliResult.stdout = JSON.stringify(plansResult);
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
-            const param = `v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_plans/service_plan-guid-1?include=service_offering"], undefined, undefined).resolves({ stdout: JSON.stringify(resultPlan), exitCode: 0 });
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_plans/service_plan-guid-2?include=service_offering"], undefined, undefined).resolves({ stdout: JSON.stringify(resultPlan), exitCode: 1 });
@@ -643,7 +650,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = `{
                 "resources": []
             }`;
-            const param = `v3/service_instances?space_guids=${spaceGuid}&fields[service_plan]=guid,name&type=managed&per_page=${CF_PAGE_SIZE}`;
+            const param = `/v3/service_instances?space_guids=${spaceGuid}&fields[service_plan]=guid,name&type=managed&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             const result = await cfLocal.cfGetServiceInstances({ filters: [{ key: eFilters.space_guids, value: spaceGuid }] });
             expect(result).to.have.lengthOf(0);
@@ -662,7 +669,7 @@ describe("cf-local-a unit tests", () => {
                     "resources": []
                 }`
             };
-            const param = `v3/service_instances?space_guids=${spaceGuid}&fields[service_plan]=guid,name&type=managed&per_page=11`;
+            const param = `/v3/service_instances?space_guids=${spaceGuid}&fields[service_plan]=guid,name&type=managed&per_page=11`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             await cfLocal.cfGetManagedServiceInstances(query);
         });
@@ -711,7 +718,7 @@ describe("cf-local-a unit tests", () => {
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
             const upsGuid = 'ups-guids-0';
             const cred = { data: { u: 'u', v: 'v' } };
-            const param = `v3/service_instances?fields[service_plan]=guid,name&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            const param = `/v3/service_instances?fields[service_plan]=guid,name&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             const serviceResult = {
                 "resources": [{
                     "name": serviceNames[0],
@@ -745,7 +752,7 @@ describe("cf-local-a unit tests", () => {
             };
             cliResult.stdout = JSON.stringify(serviceResult);
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
-            cliMock.expects("execute").withExactArgs(["curl", `v3/service_instances/${upsGuid}/credentials`], undefined, undefined).resolves(cred);
+            cliMock.expects("execute").withExactArgs(["curl", `/v3/service_instances/${upsGuid}/credentials`], undefined, undefined).resolves(cred);
             cliMock.expects("execute").withExactArgs(["curl", `/v3/service_plans/${planGuids[0]}?include=service_offering`], undefined, undefined).resolves({ exitCode: 0, stdout: JSON.stringify(resultPlan) });
             cliMock.expects("execute").withExactArgs(["curl", `/v3/service_plans/${planGuids[1]}?include=service_offering`], undefined, undefined).resolves({ exitCode: 0, stdout: `{"errors": [{"error": "some error"}]}` });
             const result = await cfLocal.cfGetServiceInstancesList({

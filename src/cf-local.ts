@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
 import { parse, stringify } from "comment-json";
 import * as _ from "lodash";
 import { Cli } from "./cli";
@@ -8,6 +12,7 @@ import {
 } from './types';
 import { ensureQuery, getDescription, getGuid, getLabel, getName, getOrgGUID, getSpaceGuidThrowIfUndefined, getTags, isUpsType, padQuery, padQuerySpace } from "./utils";
 import { SpawnOptions } from "child_process";
+import { URL } from "url";
 
 const baseParams = [
     eFilters.page, eFilters.per_page, eFilters.oder_by, eFilters.label_selector, eFilters.created_ats, eFilters.updated_ats
@@ -59,15 +64,30 @@ const resourceServiceCredentialsBinding: ResourceFilters = {
     ]))
 };
 
-function evaluateResponse(data: any) {
-    if (_.size(data.errors)) {
-        throw new Error(`${data.errors[0].detail} [code: ${data.errors[0].code} title: ${data.errors[0].title}]`);
+const resourceApps: ResourceFilters = {
+    name: "apps",
+    params: _.uniq(_.concat(baseParams, [eFilters.names, eFilters.space_guids, eFilters.organization_guids, eFilters.guids, eFilters.include]))
+};
+
+function evaluateResponse(data: any): any {
+    if (_.size(_.get(data, 'errors'))) {
+        throw new Error(`${_.get(data, ['errors', '0', 'detail'])} [code: ${_.get(data, ['errors', '0', 'code'])} title: ${_.get(data, ['errors', '0', 'title'])}]`);
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return data;
 }
 
+export async function resolveEndpoint(query: string): Promise<string> {
+    try {
+        return /http/.test(new URL(query).protocol) ? _.replace(query, (await cfGetTarget(true))["api endpoint"], '') : query;
+    } catch (e) {
+        // TypeError - query is in invalid format
+        return query;
+    }
+}
+
 let cacheServiceInstanceTypes: any = {};
-export function clearCacheServiceInstances() {
+export function clearCacheServiceInstances(): void {
     cacheServiceInstanceTypes = {};
 }
 
@@ -126,7 +146,7 @@ function waitForEntity(
             return;
         }
 
-        const state = _.get(resource, "last_operation.state", ENTITY_STATE_INPROGRESS);
+        const state = _.get(resource, "last_operation.state", ENTITY_STATE_INPROGRESS) as string;
         if (state === ENTITY_STATE_INPROGRESS) {
             progress.progress.report({ "message": `\n${messages.service_creation_started}`, increment: Math.floor(1 / maxNumberOfAttemps * 100) });
             setTimeout(() => {
@@ -155,19 +175,21 @@ async function execQuery(args: { query: string[]; options?: SpawnOptions; token?
             (cliResult.error || cliResult.stderr || cliResult.stdout)
         );
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return fncParse ? await fncParse(evaluateResponse(parse(cliResult.stdout))) : cliResult.stdout || cliResult.stderr;
 }
 
-async function execTotal(args: { query: string; options?: SpawnOptions; token?: CancellationToken }, fncParse?: (resource: any, included: any) => Promise<any>): Promise<any> {
-    const collection: any = [];
+async function execTotal(args: { query: string; options?: SpawnOptions; token?: CancellationToken }, fncParse?: (resource: any, included: any) => Promise<any>): Promise<any[]> {
+    const collection: any[] = [];
     let query = args.query;
     while (query) {
-        const result = parse(await execQuery({ query: ["curl", query], options: args.options, token: args.token }));
+        const result = parse(await execQuery({ query: ["curl", await resolveEndpoint(query)], options: args.options, token: args.token }));
         for (const resource of _.get(result, "resources", [])) {
             collection.push(fncParse ? await fncParse(resource, _.get(result, "included")) : resource);
         }
         query = _.get(result, ['pagination', 'next', 'href']);
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return _.compact(collection);
 }
 
@@ -181,13 +203,15 @@ async function getServiceInstance(query: IServiceQuery, token?: CancellationToke
     query = await padQuerySpace(query, [{ key: eFilters.type, value: eServiceTypes.managed }]);
     const result = await execTotal({ query: `/v3/service_instances?${composeQuery(query)}`, token });
     if (_.size(result) >= 1) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return _.head(result);
     }
     throw new Error(messages.service_not_found(decodeURIComponent(_.get(_.find(query.filters, ['key', eFilters.names]), 'value')) || 'unknown'));
 }
 
-async function getUpsCredentials(instanceGuid: string, token?: CancellationToken): Promise<any[]> {
-    return execQuery({ query: ['curl', `v3/service_instances/${instanceGuid}/credentials`], token }, (data: any) => data);
+async function getUpsCredentials(instanceGuid: string, token?: CancellationToken): Promise<any> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return execQuery({ query: ['curl', `/v3/service_instances/${instanceGuid}/credentials`], token }, (data: any) => data);
 }
 
 function resolveCfResource(data: CFResource, service: CFResource) {
@@ -210,6 +234,7 @@ function getCachedServicePlan(plan: any): Promise<CFResource> {
             return Promise.resolve(resolveCfResource(data, _.find(_.get(data, ['included', 'service_offerings']), ['guid', _.get(data, ['relationships', 'service_offering', 'data', 'guid'])])));
         });
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return cacheServiceInstanceTypes[plan.guid];
 }
 
@@ -223,6 +248,7 @@ function getServiceInstanceItem(item: any): Promise<any> {
             : getCachedServicePlan({ guid: planGuid }).then(plan => plan).catch(() => { return {}; }),
         plan_guid: planGuid,
         credentials: isUpsType(item)
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             ? getUpsCredentials(getGuid(item)).then(data => data).catch(() => { return {}; })
             : Promise.resolve()
     });
@@ -260,11 +286,12 @@ export async function cfGetUpsInstances(query?: IServiceQuery, token?: Cancellat
     evaluateQueryFilters(query, resourceServiceInstances);
     query = await padQuerySpace(query, [{ key: eFilters.type, value: eServiceTypes.user_provided }]);
     return resolveServiceInstances(
-        await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, async (info: any): Promise<ServiceInstanceInfo> => getServiceInstanceItem(info))
+        await execTotal({ query: `/v3/service_instances?${composeQuery(query)}`, token }, async (info: any): Promise<ServiceInstanceInfo> => getServiceInstanceItem(info))
     );
 }
 
 export async function cfCreateService(
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     planGuid: string, instanceName: string, params: any, tags: string[], progress?: ProgressHandler, maxNumberOfAttemps?: number
 ): Promise<CFResource> {
     const spaceGuid: string = await getSpaceGuidThrowIfUndefined();
@@ -294,6 +321,7 @@ export async function cfCreateUpsInstance(info: UpsTypeInfo): Promise<CFResource
     if (!spaceGuid) {
         spaceGuid = await getSpaceGuidThrowIfUndefined();
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return evaluateResponse(parse(await execQuery({
         query: ["curl", `/v3/service_instances`, '-d', stringify(
             _.merge({
@@ -316,6 +344,7 @@ export async function cfLogin(endpoint: string, user: string, pwd: string): Prom
     } catch (e) {
         result = _.get(e, 'message', '');
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return result.includes(`Authenticating...${NEW_LINE}${OK}`) ? OK : result;
 }
 
@@ -358,6 +387,7 @@ function resolvePlanInfo(data: CFResource, service: CFResource) {
 export async function cfGetServicePlansList(query?: IServiceQuery, token?: CancellationToken): Promise<PlanInfo[]> {
     query = await padQuerySpace(query, [{ key: eFilters.include, value: 'service_offering' }]);
     evaluateQueryFilters(query, resourceServicePlan);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return execTotal({ query: `/v3/service_plans?${composeQuery(query)}`, token }, (data: any, included: any) => {
         return Promise.resolve(resolvePlanInfo(data, _.find(_.get(included, 'service_offerings'), ['guid', _.get(data, ['relationships', 'service_offering', 'data', 'guid'])])));
     });
@@ -375,7 +405,7 @@ export async function cfGetServiceInstances(query?: IServiceQuery, token?: Cance
     ]);
     evaluateQueryFilters(query, resourceServiceInstances);
     return resolveServiceInstances(
-        await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => getServiceInstanceItem(info))
+        await execTotal({ query: `/v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => getServiceInstanceItem(info))
     );
 }
 
@@ -386,17 +416,18 @@ export async function cfGetManagedServiceInstances(query?: IServiceQuery, token?
 export async function cfSetOrgSpace(org: string, space?: string): Promise<void> {
     await execQuery({ query: _.concat(["target", "-o", org], (space ? ["-s", space] : [])) });
     clearCacheServiceInstances();
-    cfGetManagedServiceInstances();
+    void cfGetManagedServiceInstances();
 }
 
 export async function cfGetTargets(): Promise<CFTarget[]> {
-    const targets = await execQuery({ query: ["targets"] });
+    const targets = await execQuery({ query: ["targets"] }) as string;
 
     if (_.includes(targets, "No targets have been saved yet") || _.includes(targets, "is not a registered command")) {
         // no targets yet.
         return [{ label: DEFAULT_TARGET, isCurrent: true, isDirty: false }];
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const targetSubstrings = _.compact(_.map(targets.split(NEW_LINE), targetSubstring => targetSubstring.trim()));
     return _.map(targetSubstrings, targetSubstring => {
         const parentthesisPos = targetSubstring.indexOf("(current");
@@ -411,6 +442,7 @@ export async function cfGetTargets(): Promise<CFTarget[]> {
 
 export async function cfGetServices(query?: IServiceQuery, cancellationToken?: CancellationToken): Promise<ServiceInfo[]> {
     evaluateQueryFilters(query, resourceServiceOfferings);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return execTotal({ query: `/v3/service_offerings?${composeQuery(await padQuerySpace(query))}`, token: cancellationToken }, (service: any) => {
         return Promise.resolve({
             label: getName(service),
@@ -471,10 +503,12 @@ export async function cfBindLocalUps(filePath: string, instanceNames: string[], 
             ["bind-local-ups", "-path", filePath],
             _.reduce(instanceNames, (result, instanceName) => {
                 result = _.concat(result, [`-service-names`, `${instanceName}`]);
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                 return result;
             }, []),
             _.reduce(tags, (result, tag) => {
                 result = _.concat(result, [`-tags`, `${tag}`]);
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                 return result;
             }, [])
         )
@@ -501,6 +535,7 @@ export async function cfGetInstanceMetadata(instanceName: string): Promise<any> 
 }
 
 export async function cfGetAuthToken(): Promise<string> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return await execQuery({ query: ["oauth-token"] });
 }
 
@@ -517,27 +552,32 @@ export async function cfGetTarget(weak?: boolean): Promise<ITarget> {
             result[`${_.toLower(_.trim(_.join(_.slice(item, 0, sep), '')))}`] = _.trim(_.join(_.slice(item, sep + 1), ''));
         }
     });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return result;
 }
 
 export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
-    return execTotal({ query: _.replace(servicePlansUrl, (await cfGetTarget(true))["api endpoint"], '') }, (data: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return execTotal({ query: servicePlansUrl }, (data: any) => {
         return Promise.resolve({ label: getName(data), guid: getGuid(data), description: getDescription(data) });
     });
 }
 
-export async function cfLogout() {
+export async function cfLogout(): Promise<void> {
     await execQuery({ query: ["logout"] });
 }
 
 export async function cfGetServiceKeys(query?: IServiceQuery, token?: CancellationToken): Promise<CFResource[]> {
     evaluateQueryFilters(query, resourceServiceCredentialsBinding);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return execTotal({ query: `/v3/service_credential_bindings?${composeQuery(padQuery(query, [{ key: eFilters.type, value: 'key' }]))}`, token });
 }
 
 export async function cfGetInstanceCredentials(query?: IServiceQuery, token?: CancellationToken): Promise<any[]> {
     const results: any[] = _.map(await cfGetServiceKeys(query, token), (resource: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return execQuery({ query: ['curl', `/v3/service_credential_bindings/${getGuid(resource)}/details`], token }, (data: any) => data)
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             .then(data => data).catch(() => { return {}; });
     });
     return Promise.all(_.compact(results));
@@ -551,7 +591,9 @@ export async function cfGetInstanceKeyParameters(instanceName: string): Promise<
         await Cli.execute(["create-service-key", encodeURIComponent(instanceName), "key"]);
         keys = await cfGetServiceKeys(padQuery(query, [{ key: eFilters.names, value: 'key' }]));
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return execQuery({ query: ['curl', `/v3/service_credential_bindings/${getGuid(_.head(keys))}/details`] }, (data: any) => data)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         .then(data => data).catch(() => { return {}; });
 }
 
@@ -559,6 +601,11 @@ export async function cfGetServiceInstancesList(query?: IServiceQuery, token?: C
     query = await padQuerySpace(query, [{ key: eFilters.service_plan, value: 'guid,name', op: eOperation.fields }]);
     evaluateQueryFilters(query, resourceServiceInstances);
     return resolveServiceInstances(
-        await execTotal({ query: `v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => getServiceInstanceItem(info))
+        await execTotal({ query: `/v3/service_instances?${composeQuery(query)}`, token }, (info: any): Promise<unknown> => getServiceInstanceItem(info))
     );
+}
+
+export async function cfGetApps(query?: IServiceQuery, token?: CancellationToken): Promise<any> {
+    evaluateQueryFilters(query, resourceApps);
+    return execTotal({ query: `/v3/apps?${composeQuery(await padQuerySpace(query))}`, token });
 }

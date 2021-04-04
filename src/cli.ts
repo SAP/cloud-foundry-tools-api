@@ -33,10 +33,11 @@ export class Cli {
             });
 
             childProcess.on('error', (err: any) => {
-                const message = (err.code === "ENOENT") ? `${Cli.CF_CMD}: command not found` : err.message;
+                const message = ((_.get(err, 'code') === "ENOENT") ? `${Cli.CF_CMD}: command not found` : _.get(err, 'message')) as string;
                 resolve({ "stdout": stdout, "stderr": stderr, error: message, exitCode: CF_CMD_EXIT_CODE.ERROR });
             });
 
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
             token.onCancellationRequested(() => {
                 childProcess.kill();
                 Cli.cliResultOnExit("", resolve, "", CF_CMD_EXIT_CODE.CANCELED);
@@ -52,8 +53,9 @@ export class Cli {
         if (stdout) {
             if (stdout.indexOf("error_code") > 0) {
                 try {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     const cfErr = parse(stdout);
-                    const message = (_.get(cfErr, 'code') === 10002) ? Cli.CF_LOGIN_ERROR : _.get(cfErr, 'description', 'Internal error occured');
+                    const message = ((_.get(cfErr, 'code') === 10002) ? Cli.CF_LOGIN_ERROR : _.get(cfErr, 'description', 'Internal error occured')) as string;
                     resolve({ "stdout": stdout, "stderr": stderr, exitCode: CF_CMD_EXIT_CODE.ERROR, error: message });
                     return;
                 }
@@ -85,6 +87,7 @@ export class Cli {
                 NODE_VERSION: process.versions.node,
                 ...options.env,
             };
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             _.defaults(options, { cwd: _.get(options, "cmd", __dirname) });
         }
     }

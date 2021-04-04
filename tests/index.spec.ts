@@ -1,15 +1,15 @@
 import { expect, assert } from 'chai';
 import * as index from '../src/index';
 import * as serviceUtils from "../src/cfServicesUtil";
-import * as sinon from "sinon";
+import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 
 describe("index package test", () => {
-    let sandbox: any;
-    let mockServiceUtils: any;
+    let sandbox: SinonSandbox;
+    let mockServiceUtils: SinonMock;
 
 
     before(() => {
-        sandbox = sinon.createSandbox();
+        sandbox = createSandbox();
     });
 
     after(() => {
@@ -45,7 +45,7 @@ describe("index package test", () => {
                 type: "type",
                 version: "v0.0.1"
             },
-            catalogs: { data : "some data"},
+            catalogs: { data: "some data" },
             endpoints: {},
             preserve_host_header: false,
             "sap.cloud.service": "service",
@@ -74,15 +74,15 @@ describe("index package test", () => {
         const serviceType = 'type1';
         const servicePlan = "plan";
         const instanceName = "name";
-        const config = { some : {}};
-        const result = {data : {}};
+        const config = { some: {} };
+        const result = { data: {} };
         mockServiceUtils.expects("createServiceInstance").withExactArgs(serviceType, servicePlan, instanceName, config).resolves(result);
         assert.deepEqual(await index.apiCreateServiceInstance(serviceType, servicePlan, instanceName, config), result);
     });
 
     it("apiCreateServiceInstance:: verify calling the 'getInstanceMetadata'", async () => {
         const instanceName = "name";
-        const result = {data : {}};
+        const result = { data: {} };
         mockServiceUtils.expects("getInstanceMetadata").withExactArgs(instanceName).resolves(result);
         assert.deepEqual(await index.apiGetInstanceMetadata(instanceName), result);
     });

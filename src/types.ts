@@ -142,7 +142,7 @@ export enum eFilters {
 export enum eOperation {
     gte = 'gte', lte = 'lte', lt = 'lt', gt = 'gt', not = "not", fields = 'fields'
 }
-export interface IServiceFilters { // eslint-disable-line @typescript-eslint/interface-name-prefix
+export interface IServiceFilters { 
     key: eFilters;
     value: string;
     op?: eOperation;
@@ -151,7 +151,7 @@ export interface IServiceFilters { // eslint-disable-line @typescript-eslint/int
 export enum eOrderDirection { asc, desc }
 export enum eServiceTypes { managed = 'managed', user_provided = "user-provided" }
 
-export interface IServiceQuery { // eslint-disable-line @typescript-eslint/interface-name-prefix
+export interface IServiceQuery { 
     filters?: IServiceFilters[];
     per_page?: number; // number of results per page : valid values are 1 through 5000
     page?: number;
@@ -191,7 +191,7 @@ export interface ServiceKey {
     url: string;
 }
 
-export interface ITarget { // eslint-disable-line @typescript-eslint/interface-name-prefix
+export interface ITarget { 
     'api endpoint': string;
     'api version': string;
     user: string;

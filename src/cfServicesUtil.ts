@@ -18,8 +18,8 @@ export function getInstanceCredentials(instanceName: string): Promise<any> {
     return cfGetInstanceKeyParameters(instanceName);
 }
 
-export function createServiceInstance(serviceType: string, servicePlan: string, serviceInstanceName: string,
-    config?: any): Promise<any> {
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export function createServiceInstance(serviceType: string, servicePlan: string, serviceInstanceName: string, config?: any): Promise<any> {
     let args = ["create-service", serviceType, servicePlan, serviceInstanceName];
     if (config) {
         args = args.concat(["-c", config]);

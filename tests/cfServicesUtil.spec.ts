@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as _ from "lodash";
-import * as sinon from "sinon";
+import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import * as fsextra from "fs-extra";
 import * as cfLocal from "../src/cf-local";
 import { ITarget, ServiceInfo, ServiceInstanceInfo, eFilters, CF_PAGE_SIZE } from "../src/types";
@@ -10,13 +11,13 @@ import { fail } from "assert";
 import { cfGetConfigFilePath } from "../src/utils";
 
 describe('services unit package tests', () => {
-    let sandbox: any;
-    let mockCfLocal: any;
-    let mockCli: any;
-    let fsExtraMock: any;
+    let sandbox: SinonSandbox;
+    let mockCfLocal: SinonMock;
+    let mockCli: SinonMock;
+    let fsExtraMock: SinonMock;
 
     before(() => {
-        sandbox = sinon.createSandbox();
+        sandbox = createSandbox();
     });
 
     after(() => {

@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { expect, assert } from "chai";
 import * as _ from "lodash";
-import * as sinon from "sinon";
+import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import * as fsextra from "fs-extra";
 import * as cfLocal from "../src/cf-local";
 import * as cli from "../src/cli";
@@ -11,9 +13,9 @@ import { CliResult, ProgressHandler, CF_PAGE_SIZE, PlanInfo, eFilters, eServiceT
 import { cfGetConfigFilePath } from "../src/utils";
 
 describe("cf-local unit tests", () => {
-    let sandbox: any;
-    let cliMock: any;
-    let fsExtraMock: any;
+    let sandbox: SinonSandbox;
+    let cliMock: SinonMock;
+    let fsExtraMock: SinonMock;
     class Disposable {
         public isDisposed = false;
         public dispose() { this.isDisposed = true; }
@@ -21,7 +23,7 @@ describe("cf-local unit tests", () => {
     const token = { isCancellationRequested: false, onCancellationRequested: () => new Disposable() };
 
     before(() => {
-        sandbox = sinon.createSandbox();
+        sandbox = createSandbox();
     });
 
     after(() => {
@@ -611,7 +613,7 @@ describe("cf-local unit tests", () => {
             }
         });
 
-        it("ok:: space is provided,", async () => {
+        it("ok:: space is provided", async () => {
             const cliResult: CliResult = {
                 exitCode: 1,
                 error: "testError",
@@ -620,7 +622,7 @@ describe("cf-local unit tests", () => {
             };
             const spaceGuid = "space-guid-test";
             fsExtraMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
-            const param = `v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
+            const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             const testSpace = "testSpace";
             cliMock.expects("execute").withArgs(testArgs.concat(["-s", testSpace])).resolves({ exitCode: 0 });
@@ -812,7 +814,7 @@ describe("cf-local unit tests", () => {
         });
 
         it("ok:: verify expecting data", async () => {
-            const param = `v3/service_instances?names=${serviceNames[0]}&type=managed&space_guids=${spaceGuid}&fields[service_plan]=guid,name&per_page=${CF_PAGE_SIZE}`;
+            const param = `/v3/service_instances?names=${serviceNames[0]}&type=managed&space_guids=${spaceGuid}&fields[service_plan]=guid,name&per_page=${CF_PAGE_SIZE}`;
             const plansResult = {
                 "resources": [{
                     "name": serviceNames[0],
@@ -841,7 +843,7 @@ describe("cf-local unit tests", () => {
 
         it("exception:: service not found", async () => {
             cliResult.stdout = "{}";
-            const param = `v3/service_instances?names=${serviceNames[0]}&type=managed&space_guids=${spaceGuid}&fields[service_plan]=guid,name&per_page=${CF_PAGE_SIZE}`;
+            const param = `/v3/service_instances?names=${serviceNames[0]}&type=managed&space_guids=${spaceGuid}&fields[service_plan]=guid,name&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
                 await cfLocal.cfGetInstanceMetadata(serviceNames[0]);
