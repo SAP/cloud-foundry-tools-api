@@ -10,7 +10,7 @@ import { parse } from "comment-json";
 import { messages } from "./messages";
 import { IServiceQuery, CF_PAGE_SIZE, IServiceFilters, eFilters, eServiceTypes } from "./types";
 
-export async function dataContentAsObject(filePath: string): Promise<any> {
+export async function dataContentAsObject(filePath: string) {
     try {
         return _.reduce(_.split(await fsextra.readFile(filePath, "utf8"), os.EOL), (data: any, line: string) => {
             const parts = _.split(line, '=');

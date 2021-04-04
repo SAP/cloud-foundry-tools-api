@@ -1,16 +1,16 @@
 import { stringify } from "comment-json";
-import * as sinon from "sinon";
+import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import * as fsextra from "fs-extra";
 import * as path from "path";
 import { saveTaskConfiguration } from "../src/task";
 
 
 describe('task unit tests', () => {
-    let sandbox: sinon.SinonSandbox;
-    let fsextraMock: sinon.SinonMock;
+    let sandbox: SinonSandbox;
+    let fsextraMock: SinonMock;
 
     before(() => {
-        sandbox = sinon.createSandbox();
+        sandbox = createSandbox();
     });
 
     after(() => {

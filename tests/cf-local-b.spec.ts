@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { expect, assert } from "chai";
 import * as _ from "lodash";
-import * as sinon from "sinon";
+import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import * as fsextra from "fs-extra";
 import * as cfLocal from "../src/cf-local";
 import * as cli from "../src/cli";
@@ -13,12 +13,12 @@ import { messages } from "../src/messages";
 import { cfGetConfigFilePath } from "../src/utils";
 
 describe("cf-local-b unit tests", () => {
-    let sandbox: sinon.SinonSandbox;
-    let cliMock: sinon.SinonMock;
-    let fsExtraMock: sinon.SinonMock;
+    let sandbox: SinonSandbox;
+    let cliMock: SinonMock;
+    let fsExtraMock: SinonMock;
 
     before(() => {
-        sandbox = sinon.createSandbox();
+        sandbox = createSandbox();
     });
 
     after(() => {

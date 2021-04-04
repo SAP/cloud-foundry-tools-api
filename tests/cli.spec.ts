@@ -2,12 +2,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { expect } from "chai";
 import * as childProcess from 'child_process';
-import * as sinon from "sinon";
+import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import { Cli } from "../src/cli";
 
 describe("cli unit tests", () => {
-    let sandbox: sinon.SinonSandbox;
-    let childProcessMock: sinon.SinonMock;
+    let sandbox: SinonSandbox;
+    let childProcessMock: SinonMock;
     const token = { isCancellationRequested: false, onCancellationRequested: () => { return; } };
     const execResult = {
         kill: () => { return; },
@@ -25,7 +25,7 @@ describe("cli unit tests", () => {
     };
 
     before(() => {
-        sandbox = sinon.createSandbox();
+        sandbox = createSandbox();
     });
 
     after(() => {

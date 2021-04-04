@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { expect, assert } from "chai";
 import * as fsextra from "fs-extra";
-import * as sinon from "sinon";
+import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import * as os from "os";
 import { fail } from "assert";
 import { stringify } from "comment-json";
@@ -11,11 +11,11 @@ import { eFilters, CF_PAGE_SIZE, eServiceTypes } from "../src/types";
 import { messages } from "../src/messages";
 
 describe("Util unit tests", () => {
-    let sandbox: sinon.SinonSandbox;
-    let fsextraMock: sinon.SinonMock;
+    let sandbox: SinonSandbox;
+    let fsextraMock: SinonMock;
 
     before(() => {
-        sandbox = sinon.createSandbox();
+        sandbox = createSandbox();
     });
 
     after(() => {
@@ -93,9 +93,9 @@ describe("Util unit tests", () => {
             fsextraMock.expects("readFile").withExactArgs(utils.cfGetConfigFilePath(), "utf8").resolves(stringify({ SpaceFields: { GUID: spaceValue } }));
             expect(await utils.getSpaceGuidThrowIfUndefined()).to.be.equal(spaceValue);
         });
-        
+
         it("exception:: unable to read value", async () => {
-            fsextraMock.expects("readFile").withExactArgs(utils.cfGetConfigFilePath(), "utf8").resolves(stringify({ }));
+            fsextraMock.expects("readFile").withExactArgs(utils.cfGetConfigFilePath(), "utf8").resolves(stringify({}));
             try {
                 await utils.getSpaceGuidThrowIfUndefined();
                 fail("test should fail");
@@ -162,7 +162,7 @@ describe("Util unit tests", () => {
             expect(utils.isUpsType({ type: eServiceTypes.user_provided })).to.be.true;
             expect(utils.isUpsType({ type: 'other' })).to.be.false;
         });
-        
+
         it("isUpsType:: incorrect structure", () => {
             expect(utils.isUpsType({ typ: eServiceTypes.user_provided })).to.be.false;
             expect(utils.isUpsType(undefined)).to.be.false;
