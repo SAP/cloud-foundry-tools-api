@@ -241,6 +241,7 @@ function getCachedServicePlan(plan: any): Promise<CFResource> {
 function getServiceInstanceItem(item: any): Promise<any> {
     const planGuid = _.get(item, ['relationships', 'service_plan', 'data', 'guid']);
     return Promise.resolve({
+        guid: getGuid(item),
         label: getName(item),
         tags: getTags(item),
         serviceName: isUpsType(item)
@@ -264,12 +265,13 @@ async function resolveServiceInstances(results: any): Promise<ServiceInstanceInf
         for (const result of results) {
             const serviceName = await _.get(result, 'serviceName');
             instances.push({
+                guid: getGuid(result),
                 label: getLabel(result),
                 serviceName: _.get(serviceName, ['service_offering', 'name'], 'unknown'),
                 plan_guid: _.get(result, 'plan_guid'),
                 plan: _.get(serviceName, 'name', 'unknown'),
                 tags: _.get(result, 'tags'),
-                credentials: await result.credentials
+                credentials: await result.credentials                
             });
         }
         return _.compact(instances);

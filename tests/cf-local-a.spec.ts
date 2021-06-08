@@ -442,6 +442,7 @@ describe("cf-local-a unit tests", () => {
         };
         const planGuids = ['service_plan-guid-1', 'service_plan-guid-3', 'service_plan-guid-2', 'service_plan-guid-4'];
         const serviceNames = ['test_service_name1', 'test_service_name2', 'test_service_name3', 'test_service_name4'];
+        const serviceGuids = ['test_guid1', 'test_guid2', 'test_guid3', 'test_guid4'];
 
         it("exception:: cf space not defined, default space value is unavailable", async () => {
             fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{}`);
@@ -508,6 +509,7 @@ describe("cf-local-a unit tests", () => {
             const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             const plansResult = {
                 "resources": [{
+                    "guid": serviceGuids[0],
                     "name": serviceNames[0],
                     type: eServiceTypes.managed,
                     "tags": ["hana", "accounting", "mongodb"],
@@ -519,6 +521,7 @@ describe("cf-local-a unit tests", () => {
                         }
                     }
                 }, {
+                    "guid": serviceGuids[1],
                     "name": serviceNames[1],
                     "tags": [],
                     type: eServiceTypes.managed,
@@ -530,6 +533,7 @@ describe("cf-local-a unit tests", () => {
                         }
                     }
                 }, {
+                    "guid": serviceGuids[2],
                     "name": serviceNames[2],
                     type: eServiceTypes.managed,
                     "relationships": {
@@ -552,16 +556,19 @@ describe("cf-local-a unit tests", () => {
                 'per_page': CF_PAGE_SIZE
             });
             expect(result).to.have.lengthOf(3);
+            expect(result[0].guid).to.be.equal(serviceGuids[0]);
             expect(result[0].serviceName).to.be.equal(servicesNames[0]);
             expect(result[0].plan).to.be.equal(planName);
             expect(result[0].plan_guid).to.be.equal(planGuids[0]);
             expect(result[0].label).to.be.equal(serviceNames[0]);
             assert.deepEqual(result[0].tags, tags);
+            expect(result[1].guid).to.be.equal(serviceGuids[1]);
             expect(result[1].serviceName).to.be.equal(servicesNames[0]);
             expect(result[1].plan).to.be.equal(planName);
             expect(result[1].plan_guid).to.be.equal(planGuids[0]);
             expect(result[1].label).to.be.equal(serviceNames[1]);
             assert.deepEqual(result[1].tags, []);
+            expect(result[2].guid).to.be.equal(serviceGuids[2]);
             expect(result[2].serviceName).to.be.equal("unknown");
             expect(result[2].plan).to.be.equal("unknown");
             expect(result[2].plan_guid).to.be.equal(planGuids[1]);
@@ -573,6 +580,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.error = "";
             const plansResult = {
                 "resources": [{
+                    "guid": serviceGuids[0],
                     "name": serviceNames[0],
                     type: eServiceTypes.managed,
                     "tags": ["hana", "accounting", "mongodb"],
@@ -584,6 +592,7 @@ describe("cf-local-a unit tests", () => {
                         }
                     }
                 }, {
+                    "guid": serviceGuids[1],
                     "name": serviceNames[1],
                     type: eServiceTypes.managed,
                     "tags": [],
@@ -595,6 +604,7 @@ describe("cf-local-a unit tests", () => {
                         }
                     }
                 }, {
+                    "guid": serviceGuids[2],
                     "name": serviceNames[2],
                     type: eServiceTypes.managed,
                     "relationships": {
@@ -605,6 +615,7 @@ describe("cf-local-a unit tests", () => {
                         }
                     }
                 }, {
+                    "guid": serviceGuids[3],
                     "name": serviceNames[3],
                     type: eServiceTypes.managed,
                     "relationships": {
@@ -626,18 +637,22 @@ describe("cf-local-a unit tests", () => {
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_plans/service_plan-guid-4?include=service_offering"], undefined, undefined).rejects(new Error("some error"));
             const result = await cfLocal.cfGetServiceInstances();
             expect(result).to.have.lengthOf(4);
+            expect(result[0].guid).to.be.equal(serviceGuids[0]);
             expect(result[0].serviceName).to.be.equal(servicesNames[0]);
             expect(result[0].plan).to.be.equal(planName);
             expect(result[0].plan_guid).to.be.equal(planGuids[0]);
             expect(result[0].label).to.be.equal(serviceNames[0]);
+            expect(result[1].guid).to.be.equal(serviceGuids[1]);
             expect(result[1].serviceName).to.be.equal("unknown");
             expect(result[1].plan).to.be.equal('unknown');
             expect(result[1].plan_guid).to.be.equal(planGuids[1]);
             expect(result[1].label).to.be.equal(serviceNames[1]);
+            expect(result[2].guid).to.be.equal(serviceGuids[2]);
             expect(result[2].serviceName).to.be.equal("unknown");
             expect(result[2].plan).to.be.equal('unknown');
             expect(result[2].plan_guid).to.be.equal(planGuids[2]);
             expect(result[2].label).to.be.equal(serviceNames[2]);
+            expect(result[3].guid).to.be.equal(serviceGuids[3]);
             expect(result[3].serviceName).to.be.equal("unknown");
             expect(result[3].plan).to.be.equal('unknown');
             expect(result[3].plan_guid).to.be.equal(planGuids[3]);
@@ -709,6 +724,7 @@ describe("cf-local-a unit tests", () => {
         };
         const planGuids = ['service_plan-guid-1', 'service_plan-guid-3', 'service_plan-guid-2', 'service_plan-guid-4'];
         const serviceNames = ['test_service_name1', 'test_service_name2', 'test_service_name3', 'test_service_name4'];
+        const serviceGuids = ['test_guid1', 'test_guid2', 'test_guid3', 'test_guid4'];
 
         it("ok:: several service plan calls fails -> checking error in service_plan response", async () => {
             const tags = ["hana", "accounting", "mongodb"];
@@ -721,6 +737,7 @@ describe("cf-local-a unit tests", () => {
             const param = `/v3/service_instances?fields[service_plan]=guid,name&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             const serviceResult = {
                 "resources": [{
+                    "guid": serviceGuids[0],
                     "name": serviceNames[0],
                     type: eServiceTypes.managed,
                     "tags": ["hana", "accounting", "mongodb"],
@@ -739,6 +756,7 @@ describe("cf-local-a unit tests", () => {
                     "relationships": {
                     }
                 }, {
+                    "guid": serviceGuids[2],
                     "name": serviceNames[2],
                     type: eServiceTypes.managed,
                     "relationships": {
@@ -762,16 +780,19 @@ describe("cf-local-a unit tests", () => {
                 'per_page': CF_PAGE_SIZE
             });
             expect(result).to.have.lengthOf(3);
+            expect(result[0].guid).to.be.equal(serviceGuids[0]);
             expect(result[0].serviceName).to.be.equal(servicesNames[0]);
             expect(result[0].plan).to.be.equal(planName);
             expect(result[0].plan_guid).to.be.equal(planGuids[0]);
             expect(result[0].label).to.be.equal(serviceNames[0]);
             assert.deepEqual(result[0].tags, tags);
+            expect(result[1].guid).to.be.equal(upsGuid);
             expect(result[1].serviceName).to.be.equal(eServiceTypes.user_provided);
             expect(result[1].plan).to.be.equal('');
             expect(result[1].plan_guid).to.be.undefined;
             expect(result[1].label).to.be.equal(serviceNames[1]);
             assert.deepEqual(result[1].tags, ['test']);
+            expect(result[2].guid).to.be.equal(serviceGuids[2]);
             expect(result[2].serviceName).to.be.equal("unknown");
             expect(result[2].plan).to.be.equal("unknown");
             expect(result[2].plan_guid).to.be.equal(planGuids[1]);

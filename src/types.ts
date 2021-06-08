@@ -50,6 +50,7 @@ export interface CFTarget {
 }
 
 export interface ServiceInstanceInfo {
+    guid: string;
     label: string;
     serviceName: string;
     tags?: string[];

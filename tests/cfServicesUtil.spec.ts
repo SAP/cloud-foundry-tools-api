@@ -57,7 +57,7 @@ describe('services unit package tests', () => {
                 name: types[1]
             }
         }];
-        const instances: ServiceInstanceInfo[] = [{ label: "label1", serviceName: types[1] }, { label: "label3", serviceName: types[0] }];
+        const instances: ServiceInstanceInfo[] = [{ guid: '9e419eb2-4f90-439f-b5e3-64fbb83e3cf6', label: "label1", serviceName: types[1] }, { guid: 'fe05d6a6-56b0-4e1e-9486-fc033447b7bc', label: "label3", serviceName: types[0] }];
         const query = { 'filters': [{ key: eFilters.service_offering_names, value: _.join(_.map(types, encodeURIComponent)) }] };
 
         it("ok:: verify query parameters", async () => {
@@ -68,7 +68,9 @@ describe('services unit package tests', () => {
                 }]
             };
             mockCfLocal.expects("cfGetManagedServiceInstances").withExactArgs(servicesQuery).resolves(instances);
-            assert.deepEqual(_.map(await getServicesInstancesFilteredByType(types), 'label'), [instances[0].label, instances[1].label]);
+            const filteredServicesInstances = await getServicesInstancesFilteredByType(types);
+            assert.deepEqual(_.map(filteredServicesInstances, 'label'), [instances[0].label, instances[1].label]);
+            assert.deepEqual(_.map(filteredServicesInstances, 'guid'), [instances[0].guid, instances[1].guid]);
         });
 
         it("ok:: nothing match requested services", async () => {
