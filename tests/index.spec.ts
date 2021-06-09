@@ -31,7 +31,7 @@ describe("index package test", () => {
 
     it("apiGetServicesInstancesFilteredByType:: verify calling the 'getServicesInstancesFilteredByType'", async () => {
         const serviceTypes = ['type1', 'type2'];
-        const services = [{ label: 's1', serviceName: `${serviceTypes[0]}` }, { label: 's2', serviceName: `${serviceTypes[1]}` }];
+        const services = [{ guid: 'g1', label: 's1', serviceName: `${serviceTypes[0]}` }, { guid: 'g2', label: 's2', serviceName: `${serviceTypes[1]}` }];
         mockServiceUtils.expects("getServicesInstancesFilteredByType").withExactArgs(serviceTypes).resolves(services);
         assert.deepEqual(await index.apiGetServicesInstancesFilteredByType(serviceTypes), services);
     });
