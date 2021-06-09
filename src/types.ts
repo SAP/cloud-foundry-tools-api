@@ -50,9 +50,9 @@ export interface CFTarget {
 }
 
 export interface ServiceInstanceInfo {
-    guid: string;
     label: string;
     serviceName: string;
+    guid?: string;
     tags?: string[];
     alwaysShow?: boolean;
     plan_guid?: string;
@@ -133,7 +133,7 @@ export enum eFilters {
     page = 'page',
     per_page = 'per_page',
     oder_by = 'order_by',
-    created_ats = 'created_ats', 
+    created_ats = 'created_ats',
     updated_ats = 'updated_ats',
     status = 'status',
     // label = 'label',
@@ -143,7 +143,7 @@ export enum eFilters {
 export enum eOperation {
     gte = 'gte', lte = 'lte', lt = 'lt', gt = 'gt', not = "not", fields = 'fields'
 }
-export interface IServiceFilters { 
+export interface IServiceFilters {
     key: eFilters;
     value: string;
     op?: eOperation;
@@ -152,7 +152,7 @@ export interface IServiceFilters {
 export enum eOrderDirection { asc, desc }
 export enum eServiceTypes { managed = 'managed', user_provided = "user-provided" }
 
-export interface IServiceQuery { 
+export interface IServiceQuery {
     filters?: IServiceFilters[];
     per_page?: number; // number of results per page : valid values are 1 through 5000
     page?: number;
@@ -192,7 +192,7 @@ export interface ServiceKey {
     url: string;
 }
 
-export interface ITarget { 
+export interface ITarget {
     'api endpoint': string;
     'api version': string;
     user: string;

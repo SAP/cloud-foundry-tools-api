@@ -40,7 +40,7 @@ describe('services unit package tests', () => {
         const types = ['saas-registry', 'audolog'];
         const plans: PlanInfo[] = [{
             description: 'description1',
-            guid: 'd2ff128b-e1a8-15f7-828a-24be6173db7b',
+            guid: 'one-e1a8-15f7-828a-24be6173db7b',
             label: 'plan-1',
             service_offering: {
                 description: 'service description',
@@ -57,7 +57,7 @@ describe('services unit package tests', () => {
                 name: types[1]
             }
         }];
-        const instances: ServiceInstanceInfo[] = [{ guid: '9e419eb2-4f90-439f-b5e3-64fbb83e3cf6', label: "label1", serviceName: types[1] }, { guid: 'fe05d6a6-56b0-4e1e-9486-fc033447b7bc', label: "label3", serviceName: types[0] }];
+        const instances: ServiceInstanceInfo[] = [{ guid: 'guid1', label: "label1", serviceName: types[1] }, { guid: 'guid3', label: "label3", serviceName: types[0] }];
         const query = { 'filters': [{ key: eFilters.service_offering_names, value: _.join(_.map(types, encodeURIComponent)) }] };
 
         it("ok:: verify query parameters", async () => {

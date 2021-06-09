@@ -271,7 +271,7 @@ async function resolveServiceInstances(results: any): Promise<ServiceInstanceInf
                 plan_guid: _.get(result, 'plan_guid'),
                 plan: _.get(serviceName, 'name', 'unknown'),
                 tags: _.get(result, 'tags'),
-                credentials: await result.credentials                
+                credentials: await result.credentials
             });
         }
         return _.compact(instances);
