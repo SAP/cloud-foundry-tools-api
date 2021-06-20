@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { expect, assert } from "chai";
-import * as fsextra from "fs-extra";
+import * as fs from "fs/promises";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import * as os from "os";
 import { fail } from "assert";
@@ -12,7 +12,7 @@ import { messages } from "../src/messages";
 
 describe("Util unit tests", () => {
     let sandbox: SinonSandbox;
-    let fsextraMock: SinonMock;
+    let fsMock: SinonMock;
 
     before(() => {
         sandbox = createSandbox();
@@ -23,41 +23,41 @@ describe("Util unit tests", () => {
     });
 
     beforeEach(() => {
-        fsextraMock = sandbox.mock(fsextra);
+        fsMock = sandbox.mock(fs);
     });
 
     afterEach(() => {
-        fsextraMock.verify();
+        fsMock.verify();
     });
 
     describe("dataContentAsObject", () => {
-        it("fsextra.readFile throws error", async () => {
-            fsextraMock.expects("readFile").withExactArgs(".env", "utf8").throws(new Error("cannot read the file"));
+        it("fs.readFile throws error", async () => {
+            fsMock.expects("readFile").withExactArgs(".env", { encoding: "utf8" }).throws(new Error("cannot read the file"));
             const resObj = await utils.dataContentAsObject(".env");
             expect(resObj).to.be.deep.equal({});
         });
 
-        it("fsextra.readFile returns empty file", async () => {
-            fsextraMock.expects("readFile").withExactArgs(".env", "utf8").resolves("");
+        it("fs.readFile returns empty file", async () => {
+            fsMock.expects("readFile").withExactArgs(".env", { encoding: "utf8" }).resolves("");
             const resObj = await utils.dataContentAsObject(".env");
             expect(resObj).to.be.deep.equal({});
         });
 
-        it("fsextra.readFile returns file with json content", async () => {
-            fsextraMock.expects("readFile").withExactArgs(".env", "utf8").resolves(`{id: 123}`);
+        it("fs.readFile returns file with json content", async () => {
+            fsMock.expects("readFile").withExactArgs(".env", { encoding: "utf8" }).resolves(`{id: 123}`);
             const resObj = await utils.dataContentAsObject(".env");
             expect(resObj).to.be.deep.equal({});
         });
 
-        it("fsextra.readFile returns file with valid .env content", async () => {
-            fsextraMock.expects("readFile").withExactArgs(".env", "utf8").
+        it("fs.readFile returns file with valid .env content", async () => {
+            fsMock.expects("readFile").withExactArgs(".env", { encoding: "utf8" }).
                 resolves(`name = test       ${os.EOL}             port = 8080${os.EOL}                    company = SAP     ${os.EOL}               `);
             const resObj = await utils.dataContentAsObject(".env");
             expect(resObj).to.be.deep.equal({ name: "test", port: "8080", company: "SAP" });
         });
 
-        it("fsextra.readFile returns file with dropped line .env content", async () => {
-            fsextraMock.expects("readFile").withExactArgs(".env", "utf8").
+        it("fs.readFile returns file with dropped line .env content", async () => {
+            fsMock.expects("readFile").withExactArgs(".env", { encoding: "utf8" }).
                 resolves(`name = test       ${os.EOL}             port = 8080${os.EOL}       organization: DevX${os.EOL}             company = SAP     ${os.EOL}               `);
             const resObj = await utils.dataContentAsObject(".env");
             expect(resObj).to.be.deep.equal({ name: "test", port: "8080", company: "SAP" });
@@ -68,19 +68,19 @@ describe("Util unit tests", () => {
         const configFilePath = utils.cfGetConfigFilePath();
 
         it("ok:: required field found and exists", async () => {
-            fsextraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"name": "testName"}`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"name": "testName"}`);
             const result = await utils.cfGetConfigFileField("name");
             expect(result).to.be.equal("testName");
         });
 
         it("ok:: required field does not exist, undefined value returned", async () => {
-            fsextraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves("{}");
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves("{}");
             const result = await utils.cfGetConfigFileField("name");
             expect(result).to.be.undefined;
         });
 
         it("ok:: failed to read a config file, undefined value returned", async () => {
-            fsextraMock.expects("readFile").withExactArgs(configFilePath, "utf8").throws(new Error());
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).throws(new Error());
             const result = await utils.cfGetConfigFileField("name");
             expect(result).to.be.undefined;
         });
@@ -90,12 +90,12 @@ describe("Util unit tests", () => {
 
         it("ok:: required field found and exists", async () => {
             const spaceValue = 'space-guid';
-            fsextraMock.expects("readFile").withExactArgs(utils.cfGetConfigFilePath(), "utf8").resolves(stringify({ SpaceFields: { GUID: spaceValue } }));
+            fsMock.expects("readFile").withExactArgs(utils.cfGetConfigFilePath(), { encoding: "utf8" }).resolves(stringify({ SpaceFields: { GUID: spaceValue } }));
             expect(await utils.getSpaceGuidThrowIfUndefined()).to.be.equal(spaceValue);
         });
 
         it("exception:: unable to read value", async () => {
-            fsextraMock.expects("readFile").withExactArgs(utils.cfGetConfigFilePath(), "utf8").resolves(stringify({}));
+            fsMock.expects("readFile").withExactArgs(utils.cfGetConfigFilePath(), { encoding: "utf8" }).resolves(stringify({}));
             try {
                 await utils.getSpaceGuidThrowIfUndefined();
                 fail("test should fail");

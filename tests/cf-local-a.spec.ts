@@ -2,7 +2,7 @@
 import { expect, assert } from "chai";
 import * as _ from "lodash";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
-import * as fsextra from "fs-extra";
+import * as fs from "fs/promises";
 import * as cfLocal from "../src/cf-local";
 import * as cli from "../src/cli";
 import { fail } from "assert";
@@ -13,7 +13,7 @@ import { cfGetConfigFilePath } from "../src/utils";
 describe("cf-local-a unit tests", () => {
     let sandbox: SinonSandbox;
     let cliMock: SinonMock;
-    let fsExtraMock: SinonMock;
+    let fsMock: SinonMock;
     const testEndpoint = `https://api.cf.sap.hana.ondemand.com`;
     const testUserEmail = "user@test.com";
     const testUserPassword = "userPassword";
@@ -28,12 +28,12 @@ describe("cf-local-a unit tests", () => {
 
     beforeEach(() => {
         cliMock = sandbox.mock(cli.Cli);
-        fsExtraMock = sandbox.mock(fsextra);
+        fsMock = sandbox.mock(fs);
     });
 
     afterEach(() => {
         cliMock.verify();
-        fsExtraMock.verify();
+        fsMock.verify();
         cfLocal.clearCacheServiceInstances();
     });
 
@@ -220,7 +220,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.error = "some error";
             cliResult.exitCode = 1;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             try {
                 await cfLocal.cfGetSpaceServices();
                 fail("test should fail");
@@ -233,7 +233,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "{}";
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             const services = await cfLocal.cfGetSpaceServices();
             expect(services).to.be.empty;
         });
@@ -242,7 +242,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = stdOutOneService;
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             const services = await cfLocal.cfGetSpaceServices();
             expect(services).to.have.lengthOf(1);
         });
@@ -296,7 +296,7 @@ describe("cf-local-a unit tests", () => {
         it("fail:: run exitCode is not 0", async () => {
             cliResult.error = "some error";
             cliResult.exitCode = 1;
-            fsExtraMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
+            fsMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), { encoding: "utf8" }).resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
             try {
                 await cfLocal.cfGetServices();
@@ -310,7 +310,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "{}";
             cliResult.exitCode = 0;
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
-            fsExtraMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
+            fsMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), { encoding: "utf8" }).resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             const services = await cfLocal.cfGetServices();
             expect(services).to.be.empty;
         });
@@ -338,7 +338,7 @@ describe("cf-local-a unit tests", () => {
                 }]
             }`;
             cliResult.exitCode = 0;
-            fsExtraMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
+            fsMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), { encoding: "utf8" }).resolves(`{"SpaceFields":{"GUID": "${spaceGUID}"}}`);
             cliMock.expects("execute").withExactArgs(testArgs, undefined, undefined).resolves(cliResult);
             const services = await cfLocal.cfGetServices();
             expect(services).to.have.lengthOf(2);
@@ -445,7 +445,7 @@ describe("cf-local-a unit tests", () => {
         const serviceGuids = ['test_guid1', 'test_guid2', 'test_guid3', 'test_guid4'];
 
         it("exception:: cf space not defined, default space value is unavailable", async () => {
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{}`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{}`);
             try {
                 await cfLocal.cfGetServiceInstances();
                 fail("test should fail");
@@ -458,7 +458,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.exitCode = 1;
             cliResult.error = "testError";
             cliResult.stdout = "";
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
             const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
@@ -474,7 +474,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.error = "";
             cliResult.stdout = "testStdout";
             const timestamp = '2020-06-30T23:49:04Z';
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
             const param = `/v3/service_instances?created_ats[gte]=${timestamp}&fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
@@ -489,7 +489,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.exitCode = 1;
             cliResult.error = "testError";
             cliResult.stdout = "";
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
             const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&page=5&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             try {
@@ -505,7 +505,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.exitCode = 0;
             cliResult.error = "";
 
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
             const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             const plansResult = {
                 "resources": [{
@@ -628,7 +628,7 @@ describe("cf-local-a unit tests", () => {
                 }]
             };
             cliResult.stdout = JSON.stringify(plansResult);
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
             const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_plans/service_plan-guid-1?include=service_offering"], undefined, undefined).resolves({ stdout: JSON.stringify(resultPlan), exitCode: 0 });
@@ -731,7 +731,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.exitCode = 0;
             cliResult.error = "";
 
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
             const upsGuid = 'ups-guids-0';
             const cred = { data: { u: 'u', v: 'v' } };
             const param = `/v3/service_instances?fields[service_plan]=guid,name&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;

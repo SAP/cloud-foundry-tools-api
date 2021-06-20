@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as _ from "lodash";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
-import * as fsextra from "fs-extra";
 import * as cfLocal from "../src/cf-local";
 import { ITarget, ServiceInstanceInfo, eFilters, PlanInfo } from "../src/types";
 import * as cli from "../src/cli";
@@ -13,7 +12,6 @@ describe('services unit package tests', () => {
     let sandbox: SinonSandbox;
     let mockCfLocal: SinonMock;
     let mockCli: SinonMock;
-    let fsExtraMock: SinonMock;
 
     before(() => {
         sandbox = createSandbox();
@@ -26,13 +24,11 @@ describe('services unit package tests', () => {
     beforeEach(() => {
         mockCfLocal = sandbox.mock(cfLocal);
         mockCli = sandbox.mock(cli.Cli);
-        fsExtraMock = sandbox.mock(fsextra);
     });
 
     afterEach(() => {
         mockCfLocal.verify();
         mockCli.verify();
-        fsExtraMock.verify();
     });
 
     describe("getServicesInstancesFilteredByType", () => {
