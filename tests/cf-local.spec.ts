@@ -3,7 +3,7 @@
 import { expect, assert } from "chai";
 import * as _ from "lodash";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
-import * as fsextra from "fs-extra";
+import * as fs from "fs/promises";
 import * as cfLocal from "../src/cf-local";
 import * as cli from "../src/cli";
 import { messages } from "../src/messages";
@@ -15,7 +15,7 @@ import { cfGetConfigFilePath } from "../src/utils";
 describe("cf-local unit tests", () => {
     let sandbox: SinonSandbox;
     let cliMock: SinonMock;
-    let fsExtraMock: SinonMock;
+    let fsMock: SinonMock;
     class Disposable {
         public isDisposed = false;
         public dispose() { this.isDisposed = true; }
@@ -32,12 +32,12 @@ describe("cf-local unit tests", () => {
 
     beforeEach(() => {
         cliMock = sandbox.mock(cli.Cli);
-        fsExtraMock = sandbox.mock(fsextra);
+        fsMock = sandbox.mock(fs);
     });
 
     afterEach(() => {
         cliMock.verify();
-        fsExtraMock.verify();
+        fsMock.verify();
         cfLocal.clearCacheServiceInstances();
     });
 
@@ -155,7 +155,7 @@ describe("cf-local unit tests", () => {
         _.set(request, "tags", []);
 
         beforeEach(() => {
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": {
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields": {
                 "GUID": "${spaceGuid}"
             }}`);
         });
@@ -163,14 +163,15 @@ describe("cf-local unit tests", () => {
         it("exception:: cf space GUID not specified and default is undefined", async () => {
             instanceName = `${baseInstanceName}161`;
             sandbox.restore();
-            fsExtraMock = sandbox.mock(fsextra);
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{}`);
+            fsMock = sandbox.mock(fs);
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{}`);
             try {
                 await cfLocal.cfCreateService(planGuid, instanceName, {}, [], null);
                 fail("test should fail");
             } catch (error) {
                 expect(error.message).to.be.equal(messages.cf_setting_not_set);
             }
+            fsMock.verify();
         });
 
         it("exception:: cf space GUID default is defined, run exitCode is 1", async () => {
@@ -466,12 +467,6 @@ describe("cf-local unit tests", () => {
         };
         const args = ["curl", `/v3/service_plans?include=service_offering&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`];
 
-        beforeEach(() => {
-            fsExtraMock.expects("readFile").withExactArgs(configFilePath, "utf8").resolves(`{"SpaceFields": {
-                "GUID": "${spaceGuid}"
-            }}`);
-        });
-
         it("ok:: cf space is not provided", async () => {
             const result = {
                 included: {
@@ -521,6 +516,9 @@ describe("cf-local unit tests", () => {
             cliResult.stderr = "";
             cliResult.exitCode = 0;
             cliResult.error = "";
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields": {
+                "GUID": "${spaceGuid}"
+            }}`);
             cliMock.expects("execute").withExactArgs(args, undefined, undefined).resolves(cliResult);
             const plans: PlanInfo[] = await cfLocal.cfGetServicePlansList();
             expect(_.size(plans)).to.be.equal(2);
@@ -551,6 +549,9 @@ describe("cf-local unit tests", () => {
             cliResult.stderr = "";
             cliResult.exitCode = 1;
             cliResult.error = "some error occured";
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields": {
+                "GUID": "${spaceGuid}"
+            }}`);
             cliMock.expects("execute").withExactArgs(args, undefined, undefined).resolves(cliResult);
             try {
                 await cfLocal.cfGetServicePlansList();
@@ -565,6 +566,9 @@ describe("cf-local unit tests", () => {
             cliResult.stderr = "";
             cliResult.exitCode = 1;
             cliResult.error = "";
+            fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{"SpaceFields": {
+                "GUID": "${spaceGuid}"
+            }}`);
             cliMock.expects("execute").withExactArgs(args, undefined, undefined).resolves(cliResult);
             try {
                 await cfLocal.cfGetServicePlansList();
@@ -577,7 +581,6 @@ describe("cf-local unit tests", () => {
         it("ok:: call where cf space is specified", async () => {
             sandbox.restore();
             cliMock = sandbox.mock(cli.Cli);
-            fsExtraMock = sandbox.mock(fsextra);
             const result = {
                 included: {
                     service_offerings: [{
@@ -621,7 +624,7 @@ describe("cf-local unit tests", () => {
                 stderr: ""
             };
             const spaceGuid = "space-guid-test";
-            fsExtraMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            fsMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), { encoding: "utf8" }).resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
             const param = `/v3/service_instances?fields[service_plan]=guid,name&type=managed&space_guids=${spaceGuid}&per_page=${CF_PAGE_SIZE}`;
             cliMock.expects("execute").withArgs(["curl", param]).resolves(cliResult);
             const testSpace = "testSpace";
@@ -810,7 +813,7 @@ describe("cf-local unit tests", () => {
         };
 
         beforeEach(() => {
-            fsExtraMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), "utf8").resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
+            fsMock.expects("readFile").withExactArgs(cfGetConfigFilePath(), { encoding: "utf8" }).resolves(`{"SpaceFields": { "GUID": "${spaceGuid}" } }`);
         });
 
         it("ok:: verify expecting data", async () => {
