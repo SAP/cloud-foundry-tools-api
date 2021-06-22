@@ -72,21 +72,41 @@ export function getTags(resource: any): string[] {
     return _.get(resource, "tags", []);
 }
 
-export function cfGetConfigFilePath(): string {
-    return path.join(_.get(process, "env.CF_HOME", os.homedir()), ".cf", "config.json");
+/**
+ * Combine path to 'cf' configuration file
+ * @param target: string (optional), determines which config file is looking for 
+ * @returns 
+ */
+export function cfGetConfigFilePath(target?: string): string {
+    const relatives = target ? ['targets', `${target}.config.json`] : [`config.json`];
+    return path.join(_.get(process, "env.CF_HOME", os.homedir()), ".cf", ...relatives);
 }
 
 export function isUpsType(resource: any): boolean {
     return _.get(resource, "type", eServiceTypes.managed) === eServiceTypes.user_provided;
 }
 
-export async function cfGetConfigFileField(field: string): Promise<any> {
+/**
+ *  Get json value of config file
+ * @param target: string (optional), in case a predefined target configuration file exists the value will be fetched from there
+ * @returns object: json
+ */
+export async function cfGetConfigFileJson(target?: string): Promise<unknown> {
     try {
-        const configJson = parse(await fs.readFile(cfGetConfigFilePath(), { encoding: "utf8" }));
-        return _.get(configJson, `${field}`);
+        return parse(await fs.readFile(cfGetConfigFilePath(target), { encoding: "utf8" }));
     } catch (error) {
         // empty or non existing file
     }
+}
+
+/**
+ *  Get field value from config file
+ * @param field: string, name of requested field
+ * @param target: string (optional), in case a predefined target configuration file exists the value will be fetched from there
+ * @returns object: json
+ */
+export async function cfGetConfigFileField(field: string, target?: string): Promise<any> {
+    return _.get(await cfGetConfigFileJson(target), `${field}`);
 }
 
 export async function getSpaceGuidThrowIfUndefined(): Promise<string> {
@@ -104,4 +124,18 @@ export async function padQuerySpace(query: IServiceQuery, otherFilters?: IServic
         query.filters = _.concat(query.filters, [{ key: eFilters.space_guids, value: await getSpaceGuidThrowIfUndefined() }]);
     }
     return query;
+}
+
+export function parseRawDictData(data: string): unknown {
+    const result: any = {};
+    _.each(_.compact(_.split(data, '\n')), item => {
+        item = _.replace(_.trim(item), /^['"]|['"]$/g, '');
+        const sep = _.indexOf(item, ':');
+        if (sep > -1) {
+            const key = _.toLower(_.trim(_.join(_.slice(item, 0, sep), '')));
+            const value = _.trim(_.join(_.slice(item, sep + 1), ''));
+            result[`${key}`] = value;
+        }
+    });
+    return result;
 }

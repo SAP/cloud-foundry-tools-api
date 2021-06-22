@@ -30,7 +30,7 @@ describe('task unit tests', () => {
             const taskJsonFilePath = path.join("wsPath", ".vscode", "tasks.json");
             fsMock.expects("readFile").withExactArgs(taskJsonFilePath, { encoding: "utf8" }).throws(new Error("cannot read the file"));
             const taskToSave = { label: "test" };
-            fsMock.expects("writeFile").withExactArgs(taskJsonFilePath, stringify({ version: "2.0.0", tasks: [taskToSave] }, undefined, "  ")).resolves(undefined);
+            fsMock.expects("writeFile").withExactArgs(taskJsonFilePath, stringify({ version: "2.0.0", tasks: [taskToSave] }, undefined, "  ")).resolves();
             await saveTaskConfiguration("wsPath", taskToSave);
         });
 
@@ -38,7 +38,7 @@ describe('task unit tests', () => {
             const taskJsonFilePath = path.join("wsPath", ".vscode", "tasks.json");
             fsMock.expects("readFile").withExactArgs(taskJsonFilePath, { encoding: "utf8" }).resolves("");
             const taskToSave = { label: "test" };
-            fsMock.expects("writeFile").withExactArgs(taskJsonFilePath, stringify({ version: "2.0.0", tasks: [taskToSave] }, undefined, "  ")).resolves(undefined);
+            fsMock.expects("writeFile").withExactArgs(taskJsonFilePath, stringify({ version: "2.0.0", tasks: [taskToSave] }, undefined, "  ")).resolves();
             await saveTaskConfiguration("wsPath", taskToSave);
         });
 
@@ -46,7 +46,7 @@ describe('task unit tests', () => {
             const taskJsonFilePath = path.join("wsPath", ".vscode", "tasks.json");
             fsMock.expects("readFile").withExactArgs(taskJsonFilePath, { encoding: "utf8" }).resolves("{}");
             const taskToSave = { label: "test" };
-            fsMock.expects("writeFile").withExactArgs(taskJsonFilePath, stringify({ version: "2.0.0", tasks: [taskToSave] }, undefined, "  ")).resolves(undefined);
+            fsMock.expects("writeFile").withExactArgs(taskJsonFilePath, stringify({ version: "2.0.0", tasks: [taskToSave] }, undefined, "  ")).resolves();
             await saveTaskConfiguration("wsPath", taskToSave);
         });
 
@@ -54,7 +54,7 @@ describe('task unit tests', () => {
             const taskJsonFilePath = path.join("wsPath", ".vscode", "tasks.json");
             fsMock.expects("readFile").withExactArgs(taskJsonFilePath, { encoding: "utf8" }).resolves(`{"version": "1.2.3"}`);
             const taskToSave = { label: "test" };
-            fsMock.expects("writeFile").withExactArgs(taskJsonFilePath, stringify({ version: "1.2.3", tasks: [taskToSave] }, undefined, "  ")).resolves(undefined);
+            fsMock.expects("writeFile").withExactArgs(taskJsonFilePath, stringify({ version: "1.2.3", tasks: [taskToSave] }, undefined, "  ")).resolves();
             await saveTaskConfiguration("wsPath", taskToSave);
         });
 
@@ -62,7 +62,7 @@ describe('task unit tests', () => {
             const taskJsonFilePath = path.join("wsPath", ".vscode", "tasks.json");
             fsMock.expects("readFile").withExactArgs(taskJsonFilePath, { encoding: "utf8" }).resolves(`{"version": "1.2.3", "tasks": [{"label": "test2"}]}`);
             const taskToSave = { label: "test" };
-            fsMock.expects("writeFile").withExactArgs(taskJsonFilePath, stringify({ version: "1.2.3", tasks: [{ label: "test2" }, taskToSave] }, undefined, "  ")).resolves(undefined);
+            fsMock.expects("writeFile").withExactArgs(taskJsonFilePath, stringify({ version: "1.2.3", tasks: [{ label: "test2" }, taskToSave] }, undefined, "  ")).resolves();
             await saveTaskConfiguration("wsPath", taskToSave);
         });
     });

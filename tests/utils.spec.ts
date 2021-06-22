@@ -4,6 +4,7 @@ import { expect, assert } from "chai";
 import * as fs from "fs/promises";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import * as os from "os";
+import * as path from "path";
 import { fail } from "assert";
 import { stringify } from "comment-json";
 import * as utils from "../src/utils";
@@ -61,6 +62,21 @@ describe("Util unit tests", () => {
                 resolves(`name = test       ${os.EOL}             port = 8080${os.EOL}       organization: DevX${os.EOL}             company = SAP     ${os.EOL}               `);
             const resObj = await utils.dataContentAsObject(".env");
             expect(resObj).to.be.deep.equal({ name: "test", port: "8080", company: "SAP" });
+        });
+    });
+
+    describe("cfGetConfigFilePath scope", () => {
+
+        it("ok:: empty param - default config path returned", () => {
+            expect(utils.cfGetConfigFilePath("")).to.be.equal(path.join(os.homedir(), ".cf", `config.json`));
+        });
+
+        it("ok:: undefine param - default config path returned", () => {
+            expect(utils.cfGetConfigFilePath()).to.be.equal(path.join(os.homedir(), ".cf", `config.json`));
+        });
+
+        it("ok:: param provided - target config path returned", () => {
+            expect(utils.cfGetConfigFilePath('my-target')).to.be.equal(path.join(os.homedir(), ".cf", 'targets', `my-target.config.json`));
         });
     });
 
