@@ -8,9 +8,9 @@ import { Cli } from "./cli";
 import { messages } from "./messages";
 import {
     ProgressHandler, CliResult, CFResource, CancellationToken, CFTarget, ServiceInstanceInfo, ServiceInfo, PlanInfo,
-    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget, UpsTypeInfo, eServiceTypes
+    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget, UpsTypeInfo, eServiceTypes, Api
 } from './types';
-import { ensureQuery, getDescription, getGuid, getLabel, getName, getOrgGUID, getSpaceGuidThrowIfUndefined, getTags, isUpsType, padQuery, padQuerySpace } from "./utils";
+import { ensureQuery, getDescription, getGuid, getLabel, getName, getOrgGUID, getSpaceGuidThrowIfUndefined, getTags, isUpsType, padQuery, padQuerySpace, parseRawDictData } from "./utils";
 import { SpawnOptions } from "child_process";
 import { URL } from "url";
 
@@ -545,17 +545,7 @@ export async function cfGetTarget(weak?: boolean): Promise<ITarget> {
     if (!weak) {
         await cfGetAuthToken();
     }
-    const data = await execQuery({ query: ["target"], options: { env: { "CF_COLOR": "false" } } });
-    const result: any = {};
-    _.each(_.compact(_.split(data, '\n')), item => {
-        item = _.replace(_.trim(item), /^['"]|['"]$/g, '');
-        const sep = _.indexOf(item, ':');
-        if (sep > -1) {
-            result[`${_.toLower(_.trim(_.join(_.slice(item, 0, sep), '')))}`] = _.trim(_.join(_.slice(item, sep + 1), ''));
-        }
-    });
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return result;
+    return parseRawDictData(await execQuery({ query: ["target"], options: { env: { "CF_COLOR": "false" } } })) as ITarget;
 }
 
 export async function cfGetServicePlans(servicePlansUrl: string): Promise<PlanInfo[]> {
@@ -610,4 +600,25 @@ export async function cfGetServiceInstancesList(query?: IServiceQuery, token?: C
 export async function cfGetApps(query?: IServiceQuery, token?: CancellationToken): Promise<any> {
     evaluateQueryFilters(query, resourceApps);
     return execTotal({ query: `/v3/apps?${composeQuery(await padQuerySpace(query))}`, token });
+}
+
+/**
+ *  Set or view target api url
+ * @param params.url: string. When specified is used for set 
+ * @param params.skip_ssl_validation: boolean. Skip verification of the API endpoint. Not recommended!
+ * @param params.unset: boolean. Remove all api endpoint targeting
+ * @returns 
+ */
+export async function cfApi(params?: { url?: string, skip_ssl_validation?: boolean, unset?: boolean }): Promise<Api> {
+    const query = ['api'];
+    if (params?.url) {
+        query.push(params.url);
+    }
+    if (params?.skip_ssl_validation) {
+        query.push('--skip-ssl-validation');
+    }
+    if (params?.unset) {
+        query.push('--unset');
+    }
+    return parseRawDictData(await execQuery({ query: [...query] })) as Api;
 }

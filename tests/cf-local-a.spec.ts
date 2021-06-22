@@ -799,4 +799,61 @@ describe("cf-local-a unit tests", () => {
             expect(result[2].label).to.be.equal(serviceNames[2]);
         });
     });
+
+    describe("cfApi", () => {
+        const cliResult: CliResult = {
+            stdout: "",
+            stderr: "",
+            exitCode: 0
+        };
+
+        const endpoint = 'https://api.cf.test.ondemand.com';
+        const apiVer = '3.100.0';
+
+        it("ok:: api", async () => {
+            cliResult.stdout = `"Api endpoint:   ${endpoint}"
+            "Api version:    ${apiVer}"
+            `;
+            cliMock.expects("execute").withExactArgs(['api'], undefined, undefined).resolves(cliResult);
+            const result = await cfLocal.cfApi();
+            expect(result["api endpoint"]).to.be.equal(endpoint);
+            expect(result["api version"]).to.be.equal(apiVer);
+        });
+
+        it("ok:: api - warning, not logged in", async () => {
+            cliResult.stdout = `OK
+
+            "Api endpoint:   ${endpoint}"
+            "Api version:    ${apiVer}"
+
+            Not logged in. Use 'cf login' or 'cf login --sso' to log in.
+            `;
+            cliResult.exitCode = 0;
+            const url = 'https://api.cf.other.ondemand.com';
+            cliMock.expects("execute").withExactArgs([`api`, `${url}`], undefined, undefined).resolves(cliResult);
+            const result = await cfLocal.cfApi({ url });
+            expect(result["api endpoint"]).to.be.equal(endpoint);
+            expect(result["api version"]).to.be.equal(apiVer);
+        });
+
+        it("ok:: api, skip-validation=true, unset=false", async () => {
+            cliResult.stdout = `"Api endpoint:   ${endpoint}"
+            "Api version:    ${apiVer}"
+            `;
+            cliMock.expects("execute").withExactArgs(['api', '--skip-ssl-validation'], undefined, undefined).resolves(cliResult);
+            const result = await cfLocal.cfApi({ skip_ssl_validation: true, unset: false });
+            expect(result["api endpoint"]).to.be.equal(endpoint);
+            expect(result["api version"]).to.be.equal(apiVer);
+        });
+
+        it("ok:: api, skip-validation=true, unset=true", async () => {
+            cliResult.stdout = `"Api endpoint:   ${endpoint}"
+            "Api version:    ${apiVer}"
+            `;
+            cliMock.expects("execute").withExactArgs(['api', '--skip-ssl-validation', '--unset'], undefined, undefined).resolves(cliResult);
+            const result = await cfLocal.cfApi({ skip_ssl_validation: true, unset: true });
+            expect(result["api endpoint"]).to.be.equal(endpoint);
+            expect(result["api version"]).to.be.equal(apiVer);
+        });
+    });
 });

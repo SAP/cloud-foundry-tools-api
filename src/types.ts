@@ -192,9 +192,12 @@ export interface ServiceKey {
     url: string;
 }
 
-export interface ITarget {
+export interface Api {
     'api endpoint': string;
     'api version': string;
+}
+
+export interface ITarget extends Api {
     user: string;
     org?: string;
     space?: string;
