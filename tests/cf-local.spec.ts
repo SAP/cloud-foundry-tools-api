@@ -3,7 +3,7 @@
 import { expect, assert } from "chai";
 import * as _ from "lodash";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
-import * as fs from "fs/promises";
+import * as fs from "fs";
 import * as cfLocal from "../src/cf-local";
 import * as cli from "../src/cli";
 import { messages } from "../src/messages";
@@ -32,7 +32,7 @@ describe("cf-local unit tests", () => {
 
     beforeEach(() => {
         cliMock = sandbox.mock(cli.Cli);
-        fsMock = sandbox.mock(fs);
+        fsMock = sandbox.mock(fs.promises);
     });
 
     afterEach(() => {
@@ -163,7 +163,7 @@ describe("cf-local unit tests", () => {
         it("exception:: cf space GUID not specified and default is undefined", async () => {
             instanceName = `${baseInstanceName}161`;
             sandbox.restore();
-            fsMock = sandbox.mock(fs);
+            fsMock = sandbox.mock(fs.promises);
             fsMock.expects("readFile").withExactArgs(configFilePath, { encoding: "utf8" }).resolves(`{}`);
             try {
                 await cfLocal.cfCreateService(planGuid, instanceName, {}, [], null);
