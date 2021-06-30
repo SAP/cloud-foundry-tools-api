@@ -1,6 +1,6 @@
 import { stringify } from "comment-json";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
-import * as fs from "fs/promises";
+import * as fs from "fs";
 import * as path from "path";
 import { saveTaskConfiguration } from "../src/task";
 
@@ -18,7 +18,7 @@ describe('task unit tests', () => {
     });
 
     beforeEach(() => {
-        fsMock = sandbox.mock(fs);
+        fsMock = sandbox.mock(fs.promises);
     });
 
     afterEach(() => {

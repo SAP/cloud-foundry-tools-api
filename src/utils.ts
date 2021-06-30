@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import * as _ from "lodash";
 import * as os from "os";
-import * as fs from "fs/promises";
+import * as fs from "fs";
 import * as path from "path";
 import { parse } from "comment-json";
 import { messages } from "./messages";
@@ -12,7 +12,7 @@ import { IServiceQuery, CF_PAGE_SIZE, IServiceFilters, eFilters, eServiceTypes }
 
 export async function dataContentAsObject(filePath: string) {
     try {
-        return _.reduce(_.split(await fs.readFile(filePath, { encoding: "utf8" }), os.EOL), (data: any, line: string) => {
+        return _.reduce(_.split(await fs.promises.readFile(filePath, { encoding: "utf8" }), os.EOL), (data: any, line: string) => {
             const parts = _.split(line, '=');
             if (_.size(parts) > 1) {
                 data[_.trim(parts[0])] = _.trim(parts[1]);
@@ -93,7 +93,7 @@ export function isUpsType(resource: any): boolean {
  */
 export async function cfGetConfigFileJson(target?: string): Promise<unknown> {
     try {
-        return parse(await fs.readFile(cfGetConfigFilePath(target), { encoding: "utf8" }));
+        return parse(await fs.promises.readFile(cfGetConfigFilePath(target), { encoding: "utf8" }));
     } catch (error) {
         // empty or non existing file
     }
