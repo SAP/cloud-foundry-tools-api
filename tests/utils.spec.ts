@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { expect, assert } from "chai";
-import * as fs from "fs/promises";
+import * as fs from "fs";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import * as os from "os";
 import * as path from "path";
@@ -24,7 +24,7 @@ describe("Util unit tests", () => {
     });
 
     beforeEach(() => {
-        fsMock = sandbox.mock(fs);
+        fsMock = sandbox.mock(fs.promises);
     });
 
     afterEach(() => {
