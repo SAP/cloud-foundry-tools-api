@@ -67,7 +67,7 @@ export class Cli {
                 // most probably not logged in
                 resolve({ "stdout": stdout, "stderr": stderr, error: Cli.CF_LOGIN_ERROR, exitCode: CF_CMD_EXIT_CODE.ERROR });
                 return;
-            } else if (stdout.includes('failed') && stdout.includes('Error:')) {
+            } else if (/failed.*\bError\b:/g.test(stdout)) { // lgtm [js/polynomial-redos]
                 // DEVXBUGS-5660
                 resolve({ "stdout": stdout, "stderr": stderr, error: stdout, exitCode: CF_CMD_EXIT_CODE.ERROR });
                 return;
