@@ -242,6 +242,7 @@ describe("cf-local-b unit tests", () => {
                 ],
                 'per_page': CF_PAGE_SIZE
             };
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-argument */
             const result = await cfLocal.cfGetUpsInstances(query);
             expect(result).to.have.lengthOf(2);
             expect(result[0].guid).to.be.equal("guid-1");
@@ -272,6 +273,7 @@ describe("cf-local-b unit tests", () => {
                 ],
                 'per_page': CF_PAGE_SIZE
             };
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-argument */
             expect(await cfLocal.cfGetUpsInstances(query)).to.be.empty;
         });
     });
