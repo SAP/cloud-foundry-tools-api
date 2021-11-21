@@ -24,11 +24,6 @@
 		"pretest": "npm run compile & npm run lint",
 		"test": "nyc mocha -p tsconfig.json --config ./.mocharc.yaml --no-parallel"
 	},
-	"husky": {
-		"hooks": {
-			"commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-		}
-	},
 	"commitlint": {
 		"extends": [
 			"@commitlint/config-conventional"
@@ -46,27 +41,27 @@
 		"url": "0.11.0"
 	},
 	"devDependencies": {
-		"@commitlint/cli": "12.1.4",
-		"@commitlint/config-conventional": "12.1.4",
-		"@types/chai": "^4.2.19",
+		"@commitlint/cli": "^15.0.0",
+		"@commitlint/config-conventional": "^15.0.0",
+		"@types/chai": "^4.2.22",
 		"@types/comment-json": "2.4.2",
 		"@types/lodash": "^4.14.123",
 		"@types/mocha": "^8.2.2",
 		"@types/node": "^14.14.10",
 		"@types/properties-reader": "2.1.0",
 		"@types/sinon": "^10.0.2",
-		"@typescript-eslint/eslint-plugin": "^4.27.0",
-		"@typescript-eslint/parser": "^4.27.0",
+		"@typescript-eslint/eslint-plugin": "^5.4.0",
+		"@typescript-eslint/parser": "^5.4.0",
 		"chai": "^4.3.4",
 		"coveralls": "^3.1.0",
 		"cz-conventional-changelog": "^3.3.0",
-		"eslint": "^7.20.0",
+		"eslint": "^8.2.0",
 		"eslint-config-prettier": "^8.1.0",
-		"husky": "4.3.8",
+		"husky": "^7.0.4",
 		"mocha": "^9.0.1",
 		"nyc": "^15.1.0",
-		"prettier": "^2.0.5",
-		"sinon": "^11.1.1",
+		"prettier": "^2.4.1",
+		"sinon": "^12.0.1",
 		"ts-node": "^10.0.0",
 		"typescript": "^4.3.4"
 	}

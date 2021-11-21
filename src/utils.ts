@@ -79,6 +79,7 @@ export function getTags(resource: any): string[] {
  */
 export function cfGetConfigFilePath(target?: string): string {
     const relatives = target ? ['targets', `${target}.config.json`] : [`config.json`];
+    /* eslint-disable-next-line @typescript-eslint/no-unsafe-argument */
     return path.join(_.get(process, "env.CF_HOME", os.homedir()), ".cf", ...relatives);
 }
 
