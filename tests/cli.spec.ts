@@ -118,6 +118,7 @@ describe("cli unit tests", () => {
         });
 
         it("stdout starts with FAILED and has 'Error creating request'", async () => {
+            execResult.on = (type: string, callback: any) => (type === "exit" ? callback(1) : {});
             execResult.stdout.on = (type: string, callback: any) => (callback("FAILED and has 'Error creating request'"));
             childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
             const result = await Cli.execute(undefined, undefined, token);
@@ -128,6 +129,7 @@ describe("cli unit tests", () => {
         });
 
         it("stdout command failed and has 'Error: ssome error occured'", async () => {
+            execResult.on = (type: string, callback: any) => (type === "exit" ? callback(1) : {});
             execResult.stdout.on = (type: string, callback: any) => (callback("Request is failed. Error: it is impossible to access db."));
             childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
             const mockStdin = sandbox.mock(execResult.stdin);
@@ -138,6 +140,18 @@ describe("cli unit tests", () => {
             expect(result.exitCode).to.be.equal(-1);
             expect(result.error).to.be.equal("Request is failed. Error: it is impossible to access db.");
             mockStdin.verify();
+        });
+
+        it("stdout command failed and has 'Error: ssome error occured' as a multiline output", async () => {
+            execResult.on = (type: string, callback: any) => (type === "exit" ? callback(0) : {});
+            const output = "Request is failed.\n Error: it is impossible to access db.";
+            execResult.stdout.on = (type: string, callback: any) => (callback(output));
+            childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
+            const result = await Cli.execute();
+            expect(result.stdout).to.be.equal(output);
+            expect(result.stderr).to.be.empty;
+            expect(result.exitCode).to.be.equal(0);
+            expect(result.error).to.be.undefined;
         });
 
         it("stdout starts with FAILED and has 'No API endpoint set'", async () => {
@@ -171,5 +185,42 @@ describe("cli unit tests", () => {
             expect(result.stdout).to.be.empty;
             expect(result.exitCode).to.be.equal(-2);
         });
+
+        it("stdout command succeedded but output contains instance problem description with 'failed' and 'Error:' mutiline combination", async () => {
+            execResult.on = (type: string, callback: any) => (type === "exit" ? callback(0) : {});
+            const output = `{
+                "last_operation": {
+                    "state": "failed",
+                    "description": "Status: 503; ErrorMessage: <nil>; Description: <nil>; Response Error: invalid character '<' looking for beginning of value",
+                    "created_at": "2021-11-10T16:01:26Z"
+                }
+            }`;
+            execResult.stdout.on = (type: string, callback: any) => (callback(output));
+            childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
+            const result = await Cli.execute();
+            expect(result.stdout).to.be.equal(output);
+            expect(result.stderr).to.be.empty;
+            expect(result.exitCode).to.be.equal(0);
+            expect(result.error).to.be.undefined;
+        });
+        
+        it("stdout command succeedded but output contains instance problem description with 'failed' and 'Error:' single line combination", async () => {
+            execResult.on = (type: string, callback: any) => (type === "exit" ? callback(0) : {});
+            const output = JSON.stringify({
+                "last_operation": {
+                    "state": "failed",
+                    "description": "Status: 503; ErrorMessage: <nil>; Description: <nil>; ResponseError: invalid character '<' looking for beginning of value",
+                    "created_at": "2021-11-10T16:01:26Z"
+                }
+             });
+            execResult.stdout.on = (type: string, callback: any) => (callback(output));
+            childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
+            const result = await Cli.execute();
+            expect(result.stdout).to.be.equal(output);
+            expect(result.stderr).to.be.empty;
+            expect(result.exitCode).to.be.equal(0);
+            expect(result.error).to.be.undefined;
+        });
+
     });
 });
