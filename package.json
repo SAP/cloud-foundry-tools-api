@@ -1,7 +1,7 @@
 {
 	"name": "@sap/cf-tools",
 	"displayName": "cf-tools",
-	"version": "2.0.4",
+	"version": "2.0.5",
 	"description": "Cloud Foundry API tools",
 	"bugs": {
 		"url": "https://github.com/sap-staging/cloud-foundry-tools-api.git/issues"
@@ -19,6 +19,7 @@
 		"out/src/*.ts"
 	],
 	"scripts": {
+		"prepare": "husky install",
 		"compile": "tsc -p ./",
 		"lint": "eslint . --ext .ts,.tsx --cache",
 		"pretest": "npm run compile & npm run lint",
