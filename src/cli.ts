@@ -69,8 +69,12 @@ export class Cli {
                 return;
             } else if (/failed.*\bError\b:/g.test(stdout)) { // lgtm [js/polynomial-redos]
                 // DEVXBUGS-5660
-                resolve({ "stdout": stdout, "stderr": stderr, error: stdout, exitCode: CF_CMD_EXIT_CODE.ERROR });
-                return;
+                try {
+                    parse(stdout); // ignore, well structured data - probably not an error
+                } catch(e) {
+                    resolve({ "stdout": stdout, "stderr": stderr, error: stdout, exitCode: CF_CMD_EXIT_CODE.ERROR });
+                    return;
+                }
             } else if (stdout.startsWith('FAILED') && stdout.indexOf("No API endpoint set") > 0) {
                 // DEVXBUGS-6488
                 resolve({ "stdout": stdout, "stderr": stderr, error: stdout, exitCode: CF_CMD_EXIT_CODE.ERROR });
