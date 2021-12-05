@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { expect } from "chai";
 import * as childProcess from 'child_process';
+import { stringify } from "comment-json";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import { Cli } from "../src/cli";
 
@@ -128,7 +129,7 @@ describe("cli unit tests", () => {
             expect(result.error).to.be.equal("Not logged in. Use 'cf login' to log in.");
         });
 
-        it("stdout command failed and has 'Error: ssome error occured'", async () => {
+        it("stdout command failed and has 'Error: some error occured'", async () => {
             execResult.on = (type: string, callback: any) => (type === "exit" ? callback(1) : {});
             execResult.stdout.on = (type: string, callback: any) => (callback("Request is failed. Error: it is impossible to access db."));
             childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
@@ -142,9 +143,23 @@ describe("cli unit tests", () => {
             mockStdin.verify();
         });
 
-        it("stdout command failed and has 'Error: ssome error occured' as a multiline output", async () => {
+        it("stdout command has the substring math 'Error: some error occured' but as a multiline output", async () => {
             execResult.on = (type: string, callback: any) => (type === "exit" ? callback(0) : {});
             const output = "Request is failed.\n Error: it is impossible to access db.";
+            execResult.stdout.on = (type: string, callback: any) => (callback(output));
+            childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
+            const result = await Cli.execute();
+            expect(result.stdout).to.be.equal(output);
+            expect(result.stderr).to.be.empty;
+            expect(result.exitCode).to.be.equal(0);
+            expect(result.error).to.be.undefined;
+        });
+
+        it("stdout command has the substring math 'Error: some error occured' but as a part of well structured output", async () => {
+            execResult.on = (type: string, callback: any) => (type === "exit" ? callback(0) : {});
+            const output = stringify({
+                "description": "failed to create subscription, error: {\"message\":\"subscribe failed. Parameters: rootSubscription: 2,726,700. Error description: Timestamp: Mon Nov 29 20:02:24 GMT 2021 \"}"
+            });
             execResult.stdout.on = (type: string, callback: any) => (callback(output));
             childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
             const result = await Cli.execute();
@@ -203,7 +218,7 @@ describe("cli unit tests", () => {
             expect(result.exitCode).to.be.equal(0);
             expect(result.error).to.be.undefined;
         });
-        
+
         it("stdout command succeedded but output contains instance problem description with 'failed' and 'Error:' single line combination", async () => {
             execResult.on = (type: string, callback: any) => (type === "exit" ? callback(0) : {});
             const output = JSON.stringify({
@@ -212,7 +227,7 @@ describe("cli unit tests", () => {
                     "description": "Status: 503; ErrorMessage: <nil>; Description: <nil>; ResponseError: invalid character '<' looking for beginning of value",
                     "created_at": "2021-11-10T16:01:26Z"
                 }
-             });
+            });
             execResult.stdout.on = (type: string, callback: any) => (callback(output));
             childProcessMock.expects("spawn").withExactArgs("cf", undefined, undefined).returns(execResult);
             const result = await Cli.execute();
