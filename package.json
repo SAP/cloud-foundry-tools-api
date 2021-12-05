@@ -21,7 +21,7 @@
 	"scripts": {
 		"build": "npm-run-all test docs",
 		"compile": "tsc -p ./",
-		"docs": "shx rm -rf docs/web/html_docs && typedoc src/index.ts --tsconfig tsconfig.json --out docs/web/html_docs --name \"Cloud Foundry Tools API\" --excludePrivate --excludeInternal",
+		"docs": "shx rm -rf docs/ && typedoc src/index.ts --tsconfig tsconfig.json --out docs/ --name \"Cloud Foundry Tools API\" --excludePrivate --excludeInternal",
 		"lint": "eslint . --ext .ts,.tsx --cache",
 		"prepare": "husky install",
 		"pretest": "npm-run-all compile lint",
