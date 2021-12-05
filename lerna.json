@@ -1,0 +1,13 @@
+{
+    "useWorkspaces": true,
+    "npmClient": "npm",
+    "command": {
+      "publish": {
+        "conventionalCommits": true
+      },
+      "version": {
+        "allowBranch": ["main"],
+        "message": "chore(release): release %s"
+      }
+    }
+  }
