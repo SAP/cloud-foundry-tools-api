@@ -1,7 +1,13 @@
-# Change Log
+# Changelog
 
-All notable changes to this project will be documented in this file.
-See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [2.1.1](https://github.com/sap/cloud-foundry-tools-api/compare/v2.0.4...v2.1.1) (2021-12-06)
+
+
+### Bug Fixes
+
+* incorrect output analyzing ([#146](https://github.com/sap/cloud-foundry-tools-api/issues/146)) ([de2bed0](https://github.com/sap/cloud-foundry-tools-api/commit/de2bed0777c114389c03f83dfe7a277e47116532))
 
 ## [2.0.4](https://github.com/sap/cloud-foundry-tools-api/compare/v2.0.1...v2.0.4) (2021-11-21)
 
