@@ -81,7 +81,7 @@ describe("cf-local-a unit tests", () => {
         it("success:: origin is provided, stdout is not empty, authentication is OK", async () => {
             cliResult.stdout = `some text Authenticating...\n${OK} some text`;
             cliMock.expects("execute").withExactArgs(testArgsWithOrigin, testOptions, undefined).resolves(cliResult);
-            const result = await cfLocal.cfLogin(testEndpoint, testUserEmail, testUserPassword, testOrigin);
+            const result = await cfLocal.cfLogin(testEndpoint, testUserEmail, testUserPassword, { origin: testOrigin });
             expect(result).to.be.equal(OK);
         });
 
@@ -89,7 +89,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "";
             cliResult.stderr = "some text\nAuthenticating...\nThe origin provided is invalid.\nmore text";
             cliMock.expects("execute").withExactArgs(testArgsWithOrigin, testOptions, undefined).resolves(cliResult);
-            const result = await cfLocal.cfLogin(testEndpoint, testUserEmail, testUserPassword, testOrigin);
+            const result = await cfLocal.cfLogin(testEndpoint, testUserEmail, testUserPassword, { origin: testOrigin });
             expect(result).to.be.equal(cliResult.stderr);
         });
     });
