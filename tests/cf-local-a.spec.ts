@@ -38,7 +38,9 @@ describe("cf-local-a unit tests", () => {
     });
 
     describe("cfLogin scope", () => {
+        const testOrigin = "test.ids";
         const testArgs = ["login", "-a", testEndpoint, "-u", testUserEmail, "-p", testUserPassword, "-o", "no-org-for-now", "-s", "no-space-for-now"];
+        const testArgsWithOrigin = ["login", "-a", testEndpoint, "-u", testUserEmail, "-p", testUserPassword, "-o", "no-org-for-now", "-s", "no-space-for-now", "--origin", testOrigin];
         const testOptions = { env: { "CF_COLOR": "false" } };
         const cliResult: CliResult = {
             stdout: "",
@@ -73,6 +75,21 @@ describe("cf-local-a unit tests", () => {
             cliResult.stderr = "";
             cliMock.expects("execute").withExactArgs(testArgs, testOptions, undefined).resolves(cliResult);
             const result = await cfLocal.cfLogin(testEndpoint, testUserEmail, testUserPassword);
+            expect(result).to.be.equal(cliResult.stderr);
+        });
+
+        it("success:: origin is provided, stdout is not empty, authentication is OK", async () => {
+            cliResult.stdout = `some text Authenticating...\n${OK} some text`;
+            cliMock.expects("execute").withExactArgs(testArgsWithOrigin, testOptions, undefined).resolves(cliResult);
+            const result = await cfLocal.cfLogin(testEndpoint, testUserEmail, testUserPassword, testOrigin);
+            expect(result).to.be.equal(OK);
+        });
+
+        it("fail:: origin is provided, stdout is not empty, origin is invalid", async () => {
+            cliResult.stdout = "";
+            cliResult.stderr = "some text\nAuthenticating...\nThe origin provided is invalid.\nmore text";
+            cliMock.expects("execute").withExactArgs(testArgsWithOrigin, testOptions, undefined).resolves(cliResult);
+            const result = await cfLocal.cfLogin(testEndpoint, testUserEmail, testUserPassword, testOrigin);
             expect(result).to.be.equal(cliResult.stderr);
         });
     });

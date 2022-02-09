@@ -340,10 +340,10 @@ export async function cfCreateUpsInstance(info: UpsTypeInfo): Promise<CFResource
     })));
 }
 
-export async function cfLogin(endpoint: string, user: string, pwd: string): Promise<string> {
+export async function cfLogin(endpoint: string, user: string, pwd: string, origin?: string): Promise<string> {
     let result;
     try {
-        result = await execQuery({ query: ["login", "-a", endpoint, "-u", user, "-p", pwd, "-o", "no-org-for-now", "-s", "no-space-for-now"], options: { env: { "CF_COLOR": "false" } } }, undefined, true);
+        result = await execQuery({ query: _.concat(["login", "-a", endpoint, "-u", user, "-p", pwd, "-o", "no-org-for-now", "-s", "no-space-for-now"], (origin ? ["--origin", origin] : [])), options: { env: { "CF_COLOR": "false" } } }, undefined, true);
     } catch (e) {
         result = _.get(e, 'message', '');
     }
