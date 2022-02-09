@@ -33,6 +33,11 @@
 			"@commitlint/config-conventional"
 		]
 	},
+	"standard-version": {
+		"skip": {
+		  "tag": true
+		}
+	},
 	"config": {
 		"commitizen": {
 			"path": "cz-conventional-changelog"
