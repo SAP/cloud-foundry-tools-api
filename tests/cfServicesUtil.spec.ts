@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as _ from "lodash";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
 import * as cfLocal from "../src/cf-local";

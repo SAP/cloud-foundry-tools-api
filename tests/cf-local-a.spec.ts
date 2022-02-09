@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { expect, assert } from "chai";
 import * as _ from "lodash";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";

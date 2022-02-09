@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { SpawnOptions, spawn } from 'child_process';
 import { parse } from "comment-json";
 import * as _ from "lodash";

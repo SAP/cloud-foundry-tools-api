@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const OK = "OK";
 export const NEW_LINE = "\n";
 

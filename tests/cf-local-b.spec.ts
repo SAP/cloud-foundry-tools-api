@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { expect, assert } from "chai";
 import * as _ from "lodash";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
@@ -234,6 +232,7 @@ describe("cf-local-b unit tests", () => {
             cliMock.expects("execute").withArgs(["curl", `/v3/service_instances?space_guids=${spaceGuid}&type=user-provided&per_page=${CF_PAGE_SIZE}`]).resolves(cliResult);
             cliMock.expects("execute").withArgs(["curl", `/v3/service_instances/${guids[0]}/credentials`]).resolves({ stdout: stringify(credentialsOutput), exitCode: 0 });
             cliMock.expects("execute").withArgs(["curl", `/v3/service_instances/${guids[1]}/credentials`]).resolves({ stdout: stringify({ errors: [{ error: "error" }] }), exitCode: 0 });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const query: any = {
                 page: null,
                 'wrongKey': '',
@@ -261,10 +260,12 @@ describe("cf-local-b unit tests", () => {
             cliResult.exitCode = 0;
             cliResult.error = "";
             const expectedOutput = {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 resources: [] as any[]
             };
             cliResult.stdout = stringify(expectedOutput);
             cliMock.expects("execute").withArgs(["curl", `/v3/service_instances?space_guids=${spaceGuid}&type=user-provided&per_page=${CF_PAGE_SIZE}`]).resolves(cliResult);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const query: any = {
                 page: null,
                 'wrongKey': '',
