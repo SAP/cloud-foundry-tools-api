@@ -337,11 +337,27 @@ export async function cfCreateUpsInstance(info: UpsTypeInfo): Promise<CFResource
     })));
 }
 
-export async function cfLogin(endpoint: string, user: string, pwd: string, opts?: { origin?: string }): Promise<string> {
+export interface SSOLoginOptions {
+    endpoint: string,
+    ssoPasscode: string,
+    origin?: string
+}
+
+export interface CredentialsLoginOptions {
+    endpoint: string,
+    user: string,
+    password: string,
+    origin?: string
+}
+
+export async function cfLogin(options: SSOLoginOptions| CredentialsLoginOptions): Promise<string> {
     let result;
     try {
+        let query;
+        'ssoPasscode' in options ? query = _.concat(["login", "-a", options.endpoint, "-sso-passcode", options.ssoPasscode, "-o", "no-org-for-now", "-s", "no-space-for-now"], (options?.origin ? ["--origin", options.origin] : [])) : query = _.concat(["login", "-a", options.endpoint, "-u", options.user, "-p", options.password, "-o", "no-org-for-now", "-s", "no-space-for-now"], (options.origin ? ["--origin", options.origin] : []));
+
         result = await execQuery({
-            query: _.concat(["login", "-a", endpoint, "-u", user, "-p", pwd, "-o", "no-org-for-now", "-s", "no-space-for-now"], (opts?.origin ? ["--origin", opts.origin] : [])),
+            query: query,
             options: { env: { "CF_COLOR": "false" } }
         }, undefined, true);
     } catch (e) {
