@@ -7,7 +7,7 @@ import * as cfLocal from "../src/cf-local";
 import * as cli from "../src/cli";
 import { fail } from "assert";
 import { messages } from "../src/messages";
-import { CliResult, CF_PAGE_SIZE, OK, eFilters, eOperation, eServiceTypes } from "../src/types";
+import { CliResult, CF_PAGE_SIZE, OK, eFilters, eOperation, eServiceTypes, CredentialsLoginOptions, SSOLoginOptions } from "../src/types";
 import { cfGetConfigFilePath } from "../src/utils";
 
 describe("cf-local-a unit tests", () => {
@@ -54,7 +54,7 @@ describe("cf-local-a unit tests", () => {
         it("success:: stdout is not empty, authentication is OK with credentials", async () => {
             cliResult.stdout = `some text Authenticating...\n${OK} some text`;
             cliMock.expects("execute").withExactArgs(testArgsCredentials, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword };
+            const options : CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(OK);
         });
@@ -62,7 +62,7 @@ describe("cf-local-a unit tests", () => {
         it("success:: stdout is not empty, authentication is OK with SSO", async () => {
             cliResult.stdout = `some text Authenticating...\n${OK} some text`;
             cliMock.expects("execute").withExactArgs(testArgsSSO, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode };
+            const options : SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(OK);
         });
@@ -70,7 +70,7 @@ describe("cf-local-a unit tests", () => {
         it("fail:: stdout is not empty, authentication is not OK with credentials", async () => {
             cliResult.stdout = "some text";
             cliMock.expects("execute").withExactArgs(testArgsCredentials, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword };
+            const options : CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(cliResult.stdout);
         });
@@ -78,7 +78,7 @@ describe("cf-local-a unit tests", () => {
         it("fail:: stdout is not empty, authentication is not OK with SSO", async () => {
             cliResult.stdout = "some text";
             cliMock.expects("execute").withExactArgs(testArgsSSO, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode };
+            const options : SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(cliResult.stdout);
         });
@@ -87,7 +87,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "";
             cliResult.stderr = "some error";
             cliMock.expects("execute").withExactArgs(testArgsCredentials, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword };
+            const options : CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(cliResult.stderr);
         });
@@ -96,7 +96,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "";
             cliResult.stderr = "some error";
             cliMock.expects("execute").withExactArgs(testArgsSSO, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode };
+            const options : SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(cliResult.stderr);
         });
@@ -105,7 +105,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "";
             cliResult.stderr = "";
             cliMock.expects("execute").withExactArgs(testArgsCredentials, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword };
+            const options : CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(cliResult.stderr);
         });
@@ -114,7 +114,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "";
             cliResult.stderr = "";
             cliMock.expects("execute").withExactArgs(testArgsSSO, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode };
+            const options : SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(cliResult.stderr);
         });
@@ -123,7 +123,7 @@ describe("cf-local-a unit tests", () => {
         it("success:: origin is provided, stdout is not empty, authentication is OK with credentials", async () => {
             cliResult.stdout = `some text Authenticating...\n${OK} some text`;
             cliMock.expects("execute").withExactArgs(testArgsWithOriginCredentials, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword, origin: testOrigin };
+            const options : CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword, origin: testOrigin };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(OK);
         });
@@ -131,7 +131,7 @@ describe("cf-local-a unit tests", () => {
         it("success:: origin is provided, stdout is not empty, authentication is OK with SSO", async () => {
             cliResult.stdout = `some text Authenticating...\n${OK} some text`;
             cliMock.expects("execute").withExactArgs(testArgsWithOriginSSO, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode, origin: testOrigin };
+            const options : SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode, origin: testOrigin };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(OK);
         });
@@ -140,7 +140,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "";
             cliResult.stderr = "some text\nAuthenticating...\nThe origin provided is invalid.\nmore text";
             cliMock.expects("execute").withExactArgs(testArgsWithOriginCredentials, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword, origin: testOrigin };
+            const options : CredentialsLoginOptions = { endpoint: testEndpoint, user: testUserEmail, password: testUserPassword, origin: testOrigin };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(cliResult.stderr);
         });
@@ -149,7 +149,7 @@ describe("cf-local-a unit tests", () => {
             cliResult.stdout = "";
             cliResult.stderr = "some text\nAuthenticating...\nThe origin provided is invalid.\nmore text";
             cliMock.expects("execute").withExactArgs(testArgsWithOriginSSO, testOptions, undefined).resolves(cliResult);
-            const options : cfLocal.SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode, origin: testOrigin };
+            const options : SSOLoginOptions = { endpoint: testEndpoint, ssoPasscode: testSSOPasscode, origin: testOrigin };
             const result = await cfLocal.cfLogin(options);
             expect(result).to.be.equal(cliResult.stderr);
         });

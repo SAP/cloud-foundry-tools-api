@@ -212,3 +212,17 @@ export interface UpsTypeInfo {
     route_service_url?: string;
     tags?: string[];
 }
+
+interface LoginOptions {
+    endpoint: string,
+    origin?: string
+}
+
+export interface SSOLoginOptions extends LoginOptions {
+    ssoPasscode: string,
+}
+
+export interface CredentialsLoginOptions extends LoginOptions {
+    user: string,
+    password: string,
+}
