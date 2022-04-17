@@ -6,7 +6,7 @@ import { Cli } from "./cli";
 import { messages } from "./messages";
 import {
     ProgressHandler, CliResult, CFResource, CancellationToken, CFTarget, ServiceInstanceInfo, ServiceInfo, PlanInfo,
-    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget, UpsTypeInfo, eServiceTypes, Api
+    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget, UpsTypeInfo, eServiceTypes, Api, SSOLoginOptions, CredentialsLoginOptions
 } from './types';
 import { ensureQuery, getDescription, getGuid, getLabel, getName, getOrgGUID, getSpaceGuidThrowIfUndefined, getTags, isUpsType, padQuery, padQuerySpace, parseRawDictData } from "./utils";
 import { SpawnOptions } from "child_process";
@@ -337,11 +337,17 @@ export async function cfCreateUpsInstance(info: UpsTypeInfo): Promise<CFResource
     })));
 }
 
-export async function cfLogin(endpoint: string, user: string, pwd: string, opts?: { origin?: string }): Promise<string> {
+export async function cfLogin(options: SSOLoginOptions| CredentialsLoginOptions): Promise<string> {
     let result;
     try {
+        let query = ["login", "-a"];
+        query = 'ssoPasscode' in options 
+            ? _.concat(query, [options.endpoint, "-sso-passcode", options.ssoPasscode, "-o", "no-org-for-now", "-s", "no-space-for-now"]) 
+            : _.concat(query, [options.endpoint, "-u", options.user, "-p", options.password, "-o", "no-org-for-now", "-s", "no-space-for-now"])
+        ;
+        query = _.concat(query, (options.origin ? ["--origin", options.origin] : [])); 
         result = await execQuery({
-            query: _.concat(["login", "-a", endpoint, "-u", user, "-p", pwd, "-o", "no-org-for-now", "-s", "no-space-for-now"], (opts?.origin ? ["--origin", opts.origin] : [])),
+            query,
             options: { env: { "CF_COLOR": "false" } }
         }, undefined, true);
     } catch (e) {
