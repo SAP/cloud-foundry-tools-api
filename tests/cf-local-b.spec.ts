@@ -343,7 +343,7 @@ describe("cf-local-b unit tests", () => {
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_instances", '-d',
                 `{"name":"myInstance","type":"user-provided","relationships":{"space":{"data":{"guid":"testSpaceGUID"}}},"tags":["foo","bar","baz"]}`, "-X", "POST"],
                 undefined, undefined).resolves(cliResult);
-            assert.deepEqual(await cfLocal.cfCreateUpsInstance({ instanceName, tags }), parse(cliResult.stdout));
+            expect(await cfLocal.cfCreateUpsInstance({ instanceName, tags })).to.deep.equal(parse(cliResult.stdout));
         });
 
         it("ok:: space value specified", async () => {
@@ -352,7 +352,7 @@ describe("cf-local-b unit tests", () => {
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_instances", '-d',
                 `{"name":"myInstance","type":"user-provided","relationships":{"space":{"data":{"guid":"${mySpace}"}}}}`, "-X", "POST"],
                 undefined, undefined).resolves(cliResult);
-            assert.deepEqual(await cfLocal.cfCreateUpsInstance({ instanceName: instanceName, space_guid: mySpace }), parse(cliResult.stdout));
+            expect(await cfLocal.cfCreateUpsInstance({ instanceName: instanceName, space_guid: mySpace })).to.deep.equal(parse(cliResult.stdout));
         });
 
         it("exception:: space value not specified, default is unavailable", async () => {
@@ -382,13 +382,13 @@ describe("cf-local-b unit tests", () => {
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_instances", '-d',
                 `{"name":"myInstance","type":"user-provided","relationships":{"space":{"data":{"guid":"testSpaceGUID"}}},"credentials":{"user":"password"},"route_service_url":"service://location.org","syslog_drain_url":"drain://location.org","tags":["tag1","myTag","mono"]}`,
                 "-X", "POST"], undefined, undefined).resolves(cliResult);
-            assert.deepEqual(await cfLocal.cfCreateUpsInstance({
+            expect(await cfLocal.cfCreateUpsInstance({
                 instanceName: instanceName,
                 credentials: cred,
                 route_service_url: serviceUrl,
                 syslog_drain_url: drainUrl,
                 tags
-            }), parse(cliResult.stdout));
+            })).to.deep.equal(parse(cliResult.stdout));
         });
     });
 
