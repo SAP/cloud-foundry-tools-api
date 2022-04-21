@@ -342,7 +342,7 @@ export async function cfLogin(options: SSOLoginOptions| CredentialsLoginOptions)
     try {
         let query = ["login", "-a"];
         query = 'ssoPasscode' in options 
-            ? _.concat(query, [options.endpoint, "-sso-passcode", options.ssoPasscode, "-o", "no-org-for-now", "-s", "no-space-for-now"]) 
+            ? _.concat(query, [options.endpoint, "--sso-passcode", options.ssoPasscode, "-o", "no-org-for-now", "-s", "no-space-for-now"]) 
             : _.concat(query, [options.endpoint, "-u", options.user, "-p", options.password, "-o", "no-org-for-now", "-s", "no-space-for-now"])
         ;
         query = _.concat(query, (options.origin ? ["--origin", options.origin] : [])); 
