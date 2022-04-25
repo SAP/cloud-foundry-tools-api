@@ -41,9 +41,9 @@ describe("cf-local-a unit tests", () => {
     describe("cfLogin scope", () => {
         const testOrigin = "test.ids";
         const testArgsCredentials = ["login", "-a", testEndpoint, "-u", testUserEmail, "-p", testUserPassword, "-o", "no-org-for-now", "-s", "no-space-for-now"];
-        const testArgsSSO = ["login", "-a", testEndpoint, "-sso-passcode", testSSOPasscode, "-o", "no-org-for-now", "-s", "no-space-for-now"];
+        const testArgsSSO = ["login", "-a", testEndpoint, "--sso-passcode", testSSOPasscode, "-o", "no-org-for-now", "-s", "no-space-for-now"];
         const testArgsWithOriginCredentials = ["login", "-a", testEndpoint, "-u", testUserEmail, "-p", testUserPassword, "-o", "no-org-for-now", "-s", "no-space-for-now", "--origin", testOrigin];
-        const testArgsWithOriginSSO = ["login", "-a", testEndpoint, "-sso-passcode", testSSOPasscode, "-o", "no-org-for-now", "-s", "no-space-for-now", "--origin", testOrigin];
+        const testArgsWithOriginSSO = ["login", "-a", testEndpoint, "--sso-passcode", testSSOPasscode, "-o", "no-org-for-now", "-s", "no-space-for-now", "--origin", testOrigin];
         const testOptions = { env: { "CF_COLOR": "false" } };
         const cliResult: CliResult = {
             stdout: "",
