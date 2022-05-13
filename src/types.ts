@@ -226,3 +226,14 @@ export interface CredentialsLoginOptions extends LoginOptions {
     user: string,
     password: string,
 }
+
+export interface Organization {
+    label: string;
+    guid: string;
+}
+
+export interface Space {
+    label: string;
+    guid: string;
+    orgGUID: string;
+}

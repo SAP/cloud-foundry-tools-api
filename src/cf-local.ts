@@ -6,7 +6,7 @@ import { Cli } from "./cli";
 import { messages } from "./messages";
 import {
     ProgressHandler, CliResult, CFResource, CancellationToken, CFTarget, ServiceInstanceInfo, ServiceInfo, PlanInfo,
-    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget, UpsTypeInfo, eServiceTypes, Api, SSOLoginOptions, CredentialsLoginOptions
+    DEFAULT_TARGET, IServiceQuery, NEW_LINE, OK, eFilters, IServiceFilters, eOperation, ITarget, UpsTypeInfo, eServiceTypes, Api, SSOLoginOptions, CredentialsLoginOptions, Organization, Space
 } from './types';
 import { ensureQuery, getDescription, getGuid, getLabel, getName, getOrgGUID, getSpaceGuidThrowIfUndefined, getTags, isUpsType, padQuery, padQuerySpace, parseRawDictData } from "./utils";
 import { SpawnOptions } from "child_process";
@@ -337,15 +337,15 @@ export async function cfCreateUpsInstance(info: UpsTypeInfo): Promise<CFResource
     })));
 }
 
-export async function cfLogin(options: SSOLoginOptions| CredentialsLoginOptions): Promise<string> {
+export async function cfLogin(options: SSOLoginOptions | CredentialsLoginOptions): Promise<string> {
     let result;
     try {
         let query = ["login", "-a"];
-        query = 'ssoPasscode' in options 
-            ? _.concat(query, [options.endpoint, "--sso-passcode", options.ssoPasscode, "-o", "no-org-for-now", "-s", "no-space-for-now"]) 
+        query = 'ssoPasscode' in options
+            ? _.concat(query, [options.endpoint, "--sso-passcode", options.ssoPasscode, "-o", "no-org-for-now", "-s", "no-space-for-now"])
             : _.concat(query, [options.endpoint, "-u", options.user, "-p", options.password, "-o", "no-org-for-now", "-s", "no-space-for-now"])
-        ;
-        query = _.concat(query, (options.origin ? ["--origin", options.origin] : [])); 
+            ;
+        query = _.concat(query, (options.origin ? ["--origin", options.origin] : []));
         result = await execQuery({
             query,
             options: { env: { "CF_COLOR": "false" } }
@@ -357,26 +357,33 @@ export async function cfLogin(options: SSOLoginOptions| CredentialsLoginOptions)
     return result.includes(`Authenticating...${NEW_LINE}${OK}`) ? OK : result;
 }
 
-export async function cfGetAvailableOrgs(query?: IServiceQuery): Promise<any[]> {
+export async function cfGetAvailableOrgs(query?: IServiceQuery): Promise<Organization[]> {
     evaluateQueryFilters(query, resourceOrganizations);
-    return execTotal({ query: `/v3/organizations?${composeQuery(query)}` }, (resource: any) => {
-        return Promise.resolve({ label: getName(resource), guid: getGuid(resource) });
+    const ret: Promise<Organization[]> = execTotal({ query: `/v3/organizations?${composeQuery(query)}` }, (resource: any) => {
+        return Promise.resolve({
+            label: getName(resource),
+            guid: getGuid(resource)
+        });
     });
+
+    return ret;
 }
 
-export async function cfGetAvailableSpaces(orgGuid?: string): Promise<any[]> {
+export async function cfGetAvailableSpaces(orgGuid?: string): Promise<Space[]> {
     const query = ensureQuery();
     if (orgGuid) {
         _.merge(query.filters, [{ key: eFilters.organization_guids, value: orgGuid }]);
     }
     evaluateQueryFilters(query, resourceSpaces);
-    return execTotal({ query: `/v3/spaces?${composeQuery(query)}` }, (resource: any) => {
+    const ret: Promise<Space[]> = execTotal({ query: `/v3/spaces?${composeQuery(query)}` }, (resource: any) => {
         return Promise.resolve({
             label: getName(resource),
             guid: getGuid(resource),
             orgGUID: getOrgGUID(resource)
         });
     });
+
+    return ret;
 }
 
 function resolvePlanInfo(data: CFResource, service: CFResource) {
