@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Cli } from "./cli";
 import * as _ from "lodash";
 import { eFilters, ServiceInstanceInfo } from "./types";

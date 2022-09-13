@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { expect, assert } from "chai";
 import * as _ from "lodash";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
@@ -759,6 +757,7 @@ describe("cf-local unit tests", () => {
             const guid = 'instance_guid';
             cliMock.expects("execute").withExactArgs(['curl', `/v3/service_credential_bindings?names=${value}&service_instance_guids=${guid}&type=key&per_page=${CF_PAGE_SIZE}`], undefined, undefined).resolves(cliResult);
             const answer = await cfLocal.cfGetServiceKeys({ filters: [{ key: eFilters.names, value }, { key: eFilters.service_instance_guids, value: guid }] });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             assert.deepEqual(answer as any, result.resources);
         });
 

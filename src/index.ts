@@ -14,15 +14,17 @@ export async function apiGetServicesInstancesFilteredByType(serviceTypes: string
 /**
  * @deprecated use cfGetInstanceKeyParameters instead of
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function apiGetInstanceCredentials(instanceName: string): Promise<any> {
     return serviceUtils.getInstanceCredentials(instanceName);
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function apiCreateServiceInstance(serviceType: string, servicePlan: string, instanceName: string, config?: any) {
     return serviceUtils.createServiceInstance(serviceType, servicePlan, instanceName, config);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function apiGetInstanceMetadata(instanceName: string): Promise<any> {
     return serviceUtils.getInstanceMetadata(instanceName);
 }

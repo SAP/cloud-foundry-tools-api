@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as _ from "lodash";
 import * as os from "os";
 import * as fs from "fs";
@@ -12,11 +10,13 @@ import { IServiceQuery, CF_PAGE_SIZE, IServiceFilters, eFilters, eServiceTypes }
 
 export async function dataContentAsObject(filePath: string) {
     try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return _.reduce(_.split(await fs.promises.readFile(filePath, { encoding: "utf8" }), os.EOL), (data: any, line: string) => {
             const parts = _.split(line, '=');
             if (_.size(parts) > 1) {
                 data[_.trim(parts[0])] = _.trim(parts[1]);
             }
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return data;
         }, {});
     } catch (error) {

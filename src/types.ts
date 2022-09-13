@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const OK = "OK";
 export const NEW_LINE = "\n";
 
@@ -210,4 +211,29 @@ export interface UpsTypeInfo {
     credentials?: unknown;
     route_service_url?: string;
     tags?: string[];
+}
+
+interface LoginOptions {
+    endpoint: string,
+    origin?: string
+}
+
+export interface SSOLoginOptions extends LoginOptions {
+    ssoPasscode: string,
+}
+
+export interface CredentialsLoginOptions extends LoginOptions {
+    user: string,
+    password: string,
+}
+
+export interface Organization {
+    label: string;
+    guid: string;
+}
+
+export interface Space {
+    label: string;
+    guid: string;
+    orgGUID: string;
 }

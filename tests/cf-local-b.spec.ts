@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { expect, assert } from "chai";
 import * as _ from "lodash";
 import { SinonSandbox, SinonMock, createSandbox } from "sinon";
@@ -234,6 +232,7 @@ describe("cf-local-b unit tests", () => {
             cliMock.expects("execute").withArgs(["curl", `/v3/service_instances?space_guids=${spaceGuid}&type=user-provided&per_page=${CF_PAGE_SIZE}`]).resolves(cliResult);
             cliMock.expects("execute").withArgs(["curl", `/v3/service_instances/${guids[0]}/credentials`]).resolves({ stdout: stringify(credentialsOutput), exitCode: 0 });
             cliMock.expects("execute").withArgs(["curl", `/v3/service_instances/${guids[1]}/credentials`]).resolves({ stdout: stringify({ errors: [{ error: "error" }] }), exitCode: 0 });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const query: any = {
                 page: null,
                 'wrongKey': '',
@@ -261,10 +260,12 @@ describe("cf-local-b unit tests", () => {
             cliResult.exitCode = 0;
             cliResult.error = "";
             const expectedOutput = {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 resources: [] as any[]
             };
             cliResult.stdout = stringify(expectedOutput);
             cliMock.expects("execute").withArgs(["curl", `/v3/service_instances?space_guids=${spaceGuid}&type=user-provided&per_page=${CF_PAGE_SIZE}`]).resolves(cliResult);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const query: any = {
                 page: null,
                 'wrongKey': '',
@@ -342,7 +343,7 @@ describe("cf-local-b unit tests", () => {
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_instances", '-d',
                 `{"name":"myInstance","type":"user-provided","relationships":{"space":{"data":{"guid":"testSpaceGUID"}}},"tags":["foo","bar","baz"]}`, "-X", "POST"],
                 undefined, undefined).resolves(cliResult);
-            assert.deepEqual(await cfLocal.cfCreateUpsInstance({ instanceName, tags }), parse(cliResult.stdout));
+            expect(await cfLocal.cfCreateUpsInstance({ instanceName, tags })).to.deep.equal(parse(cliResult.stdout));
         });
 
         it("ok:: space value specified", async () => {
@@ -351,7 +352,7 @@ describe("cf-local-b unit tests", () => {
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_instances", '-d',
                 `{"name":"myInstance","type":"user-provided","relationships":{"space":{"data":{"guid":"${mySpace}"}}}}`, "-X", "POST"],
                 undefined, undefined).resolves(cliResult);
-            assert.deepEqual(await cfLocal.cfCreateUpsInstance({ instanceName: instanceName, space_guid: mySpace }), parse(cliResult.stdout));
+            expect(await cfLocal.cfCreateUpsInstance({ instanceName: instanceName, space_guid: mySpace })).to.deep.equal(parse(cliResult.stdout));
         });
 
         it("exception:: space value not specified, default is unavailable", async () => {
@@ -381,13 +382,13 @@ describe("cf-local-b unit tests", () => {
             cliMock.expects("execute").withExactArgs(["curl", "/v3/service_instances", '-d',
                 `{"name":"myInstance","type":"user-provided","relationships":{"space":{"data":{"guid":"testSpaceGUID"}}},"credentials":{"user":"password"},"route_service_url":"service://location.org","syslog_drain_url":"drain://location.org","tags":["tag1","myTag","mono"]}`,
                 "-X", "POST"], undefined, undefined).resolves(cliResult);
-            assert.deepEqual(await cfLocal.cfCreateUpsInstance({
+            expect(await cfLocal.cfCreateUpsInstance({
                 instanceName: instanceName,
                 credentials: cred,
                 route_service_url: serviceUrl,
                 syslog_drain_url: drainUrl,
                 tags
-            }), parse(cliResult.stdout));
+            })).to.deep.equal(parse(cliResult.stdout));
         });
     });
 
