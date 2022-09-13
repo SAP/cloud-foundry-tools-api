@@ -1,5 +1,5 @@
 module.exports = {
-  require: ["source-map-support/register"],
-  spec: "./tests/**/*spec.ts",
+  // require: ["source-map-support/register"],
+  spec: "./out/tests/**/*spec.js",
   timeout: 80000,
 };
