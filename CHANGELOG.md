@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.0.4](https://github.com/sap/cloud-foundry-tools-api/compare/v3.0.1...v3.0.4) (2022-09-13)
+
+
+### Bug Fixes
+
+* added types instead of any ([#155](https://github.com/sap/cloud-foundry-tools-api/issues/155)) ([cc85b7a](https://github.com/sap/cloud-foundry-tools-api/commit/cc85b7ae7bf81cb9f26792b48d27aac5e9bb2645))
+
 ## [2.2.0](https://github.com/sap/cloud-foundry-tools-api/compare/v2.0.4...v2.2.0) (2022-02-09)
 
 ### Features
