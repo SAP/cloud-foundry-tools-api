@@ -20,8 +20,6 @@ jobs: # a collection of steps
     steps:
       - checkout
       
-      - restore_cache:
-          key: dependency-cache-{{ checksum "package.json" }}
       - run:
           name: install
           command: npm install
@@ -44,10 +42,6 @@ jobs: # a collection of steps
       - run:
           name: package
           command: npm pack
-      - save_cache:
-          paths:
-            - node_modules
-          key: dependency-cache-{{ checksum "package.json" }}
       - persist_to_workspace:
           root: .
           paths: 
