@@ -2,37 +2,55 @@
 import { Cli } from "./cli";
 import * as _ from "lodash";
 import { eFilters, ServiceInstanceInfo } from "./types";
-import { cfGetInstanceMetadata, cfGetTarget, cfGetInstanceKeyParameters, cfGetManagedServiceInstances, cfGetServicePlansList } from "./cf-local";
+import {
+  cfGetInstanceMetadata,
+  cfGetTarget,
+  cfGetInstanceKeyParameters,
+  cfGetManagedServiceInstances,
+  cfGetServicePlansList,
+} from "./cf-local";
 
 export async function getServicesInstancesFilteredByType(serviceTypes: string[]): Promise<ServiceInstanceInfo[]> {
-    const guids = _.map(await cfGetServicePlansList({ filters: [{ key: eFilters.service_offering_names, value: _.join(_.map(serviceTypes, encodeURIComponent)) }] }), 'guid');
-    return _.size(guids) ? cfGetManagedServiceInstances({ 'filters': [{ key: eFilters.service_plan_guids, value: _.join(guids) }] }) : [];
+  const guids = _.map(
+    await cfGetServicePlansList({
+      filters: [{ key: eFilters.service_offering_names, value: _.join(_.map(serviceTypes, encodeURIComponent)) }],
+    }),
+    "guid"
+  );
+  return _.size(guids)
+    ? cfGetManagedServiceInstances({ filters: [{ key: eFilters.service_plan_guids, value: _.join(guids) }] })
+    : [];
 }
 
 /**
  * @deprecated use cfGetInstanceKeyParameters instead of
  */
 export function getInstanceCredentials(instanceName: string): Promise<any> {
-    return cfGetInstanceKeyParameters(instanceName);
+  return cfGetInstanceKeyParameters(instanceName);
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function createServiceInstance(serviceType: string, servicePlan: string, serviceInstanceName: string, config?: any): Promise<any> {
-    let args = ["create-service", serviceType, servicePlan, serviceInstanceName];
-    if (config) {
-        args = args.concat(["-c", config]);
-    }
-    return Cli.execute(args);
+export function createServiceInstance(
+  serviceType: string,
+  servicePlan: string,
+  serviceInstanceName: string,
+  config?: any
+): Promise<any> {
+  let args = ["create-service", serviceType, servicePlan, serviceInstanceName];
+  if (config) {
+    args = args.concat(["-c", config]);
+  }
+  return Cli.execute(args);
 }
 
 /**
  * @deprecated : use cfGetInstanceMetadata instead of
  */
 export function getInstanceMetadata(instanceName: string): Promise<any> {
-    return cfGetInstanceMetadata(instanceName);
+  return cfGetInstanceMetadata(instanceName);
 }
 
 export async function isTargetSet(): Promise<boolean> {
-    const target = await cfGetTarget();
-    return !_.isEmpty(target.org) && !_.isEmpty(target.space);
+  const target = await cfGetTarget();
+  return !_.isEmpty(target.org) && !_.isEmpty(target.space);
 }
