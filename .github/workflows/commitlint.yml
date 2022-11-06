@@ -1,7 +1,7 @@
 name: Lint Commit Messages
 on:
   # Trigger the workflow on push or pull request,
-  # but only for the master branch
+  # but only for the main branch
   # See: https://github.community/t/duplicate-checks-on-push-and-pull-request-simultaneous-event/18012
   push:
     branches:
