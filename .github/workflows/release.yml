@@ -1,0 +1,30 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      # using `v1` because of: https://github.com/actions/checkout/issues/246
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Test
+        run: npm run test
+
+      - name: Package
+        run: npm pack
+
+      - name: Create Github Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: sap-cf-tools-*.tgz
+          fail_on_unmatched_files: true
