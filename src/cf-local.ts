@@ -745,7 +745,8 @@ export async function cfBindLocalServices(
   instanceNames: string[],
   tags?: string[],
   serviceKeyNames?: string[],
-  serviceKeyParams?: unknown[]
+  serviceKeyParams?: unknown[],
+  quoteVcap?: boolean
 ): Promise<void> {
   await execQuery({
     query: [
@@ -763,7 +764,8 @@ export async function cfBindLocalServices(
               return stringify(param);
             })
           )
-        : []),
+        : [],
+        quoteVcap ? "-quote-vcap" : ""),
     ],
   });
 }
@@ -775,7 +777,7 @@ export async function cfBindLocalServices(
  * @param instanceNames : string[]
  * @param tags : string[]
  */
-export async function cfBindLocalUps(filePath: string, instanceNames: string[], tags?: string[]): Promise<void> {
+export async function cfBindLocalUps(filePath: string, instanceNames: string[], tags?: string[], quoteVcap?: boolean): Promise<void> {
   await execQuery({
     query: _.concat(
       ["bind-local-ups", "-path", filePath],
@@ -796,7 +798,8 @@ export async function cfBindLocalUps(filePath: string, instanceNames: string[], 
           return result;
         },
         []
-      )
+      ),
+      quoteVcap ? "-quote-vcap" : ""
     ),
   });
 }
