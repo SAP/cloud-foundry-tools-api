@@ -330,6 +330,31 @@ describe("cf-local-b unit tests", () => {
         .resolves(cliResult);
       await cfLocal.cfBindLocalUps(filePath, instanceNames, tags);
     });
+
+    it("ok:: cfBindLocalUps with quote-vcap", async () => {
+      cliMock
+        .expects("execute")
+        .withExactArgs(
+          [
+            "bind-local-ups",
+            "-path",
+            filePath,
+            "-service-names",
+            instanceNames[0],
+            "-service-names",
+            instanceNames[1],
+            "-tags",
+            tags[0],
+            "-tags",
+            tags[1],
+            "-quote-vcap"
+          ],
+          undefined,
+          undefined
+        )
+        .resolves(cliResult);
+      await cfLocal.cfBindLocalUps(filePath, instanceNames, tags, true);
+    });
   });
 
   describe("cfLogout", () => {

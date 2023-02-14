@@ -155,6 +155,22 @@ describe("cf-local unit tests", () => {
         .resolves(cliResult);
       await cfLocal.cfBindLocalServices(filePath, instanceNames, [], [], params);
     });
+
+    it("ok:: quote-vcap is provided", async () => {
+      cliResult.error = "";
+      cliResult.stdout = "";
+      cliResult.exitCode = 0;
+      
+      cliMock
+        .expects("execute")
+        .withExactArgs(
+          ["bind-local", "-path", filePath, "-service-names", ...instanceNames, "-quote-vcap"],
+          undefined,
+          undefined
+        )
+        .resolves(cliResult);
+      await cfLocal.cfBindLocalServices(filePath, instanceNames, [], [], [], true);
+    });
   });
 
   describe("cfCreateService scope", () => {

@@ -764,8 +764,8 @@ export async function cfBindLocalServices(
               return stringify(param);
             })
           )
-        : [],
-        quoteVcap ? "-quote-vcap" : ""),
+        : []),
+        ...(quoteVcap ? ["-quote-vcap"] : [])
     ],
   });
 }
@@ -799,7 +799,7 @@ export async function cfBindLocalUps(filePath: string, instanceNames: string[], 
         },
         []
       ),
-      quoteVcap ? "-quote-vcap" : ""
+      quoteVcap ? ["-quote-vcap"] : []
     ),
   });
 }
