@@ -739,7 +739,7 @@ export async function cfGetSpaceServices(
  * @param tags : string[] (Optional)
  * @param serviceKeyNames : string[] (Optional)
  * @param serviceKeyParams : any[] (Optional) Example: {"pemissions":["development"]}
- * @param quoteVcap : boolean (Optional)
+ * @param quoteVcap : boolean (Optional) If true, it will surround the VCAP_SERVICES JSON object with single quotes
  */
 export async function cfBindLocalServices(
   filePath: string,
@@ -777,7 +777,7 @@ export async function cfBindLocalServices(
  * @param filePath : string
  * @param instanceNames : string[]
  * @param tags : string[] (Optional)
- * @param quoteVcap : boolean (Optional)
+ * @param quoteVcap : boolean (Optional) If true, it will surround the VCAP_SERVICES JSON object with single quotes
  */
 export async function cfBindLocalUps(
   filePath: string,
