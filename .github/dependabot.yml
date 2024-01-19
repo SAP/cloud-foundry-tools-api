@@ -10,4 +10,3 @@ updates:
       interval: "daily"
     commit-message-options:
       prefix: "chore(deps):"
-      max-title-width: 99
