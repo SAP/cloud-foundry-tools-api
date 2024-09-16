@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.2.2](https://github.com/sap/cloud-foundry-tools-api/compare/v3.2.0...v3.2.2) (2024-09-16)
+
+
+### Bug Fixes
+
+* delete .github/dependabot.yml ([#168](https://github.com/sap/cloud-foundry-tools-api/issues/168)) ([0026e6a](https://github.com/sap/cloud-foundry-tools-api/commit/0026e6af37ec5a4de90ce08cc572e1df602cc00a))
+* dependabot.yml ([#167](https://github.com/sap/cloud-foundry-tools-api/issues/167)) ([3dc2584](https://github.com/sap/cloud-foundry-tools-api/commit/3dc2584f2a9ce4f1a8bdb516d4d54feca490585f))
+
 ## [3.2.0](https://github.com/sap/cloud-foundry-tools-api/compare/v3.0.1...v3.2.0) (2023-02-15)
 
 ### Features
