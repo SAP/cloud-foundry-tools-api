@@ -188,7 +188,8 @@ describe("cli unit tests", () => {
     });
 
     it("stdout starts with FAILED and has 'No API endpoint set'", async () => {
-      const errorText = "FAILED\
+      const errorText =
+        "FAILED\
                                 No API endpoint set.";
       const execResult = {
         stdin: {

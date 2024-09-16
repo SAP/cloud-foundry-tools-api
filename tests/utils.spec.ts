@@ -53,7 +53,7 @@ describe("Util unit tests", () => {
         .expects("readFile")
         .withExactArgs(".env", { encoding: "utf8" })
         .resolves(
-          `name = test       ${os.EOL}             port = 8080${os.EOL}                    company = SAP     ${os.EOL}               `
+          `name = test       ${os.EOL}             port = 8080${os.EOL}                    company = SAP     ${os.EOL}               `,
         );
       const resObj = await utils.dataContentAsObject(".env");
       expect(resObj).to.be.deep.equal({ name: "test", port: "8080", company: "SAP" });
@@ -64,7 +64,7 @@ describe("Util unit tests", () => {
         .expects("readFile")
         .withExactArgs(".env", { encoding: "utf8" })
         .resolves(
-          `name = test       ${os.EOL}             port = 8080${os.EOL}       organization: DevX${os.EOL}             company = SAP     ${os.EOL}               `
+          `name = test       ${os.EOL}             port = 8080${os.EOL}       organization: DevX${os.EOL}             company = SAP     ${os.EOL}               `,
         );
       const resObj = await utils.dataContentAsObject(".env");
       expect(resObj).to.be.deep.equal({ name: "test", port: "8080", company: "SAP" });
@@ -82,7 +82,7 @@ describe("Util unit tests", () => {
 
     it("ok:: param provided - target config path returned", () => {
       expect(utils.cfGetConfigFilePath("my-target")).to.be.equal(
-        path.join(os.homedir(), ".cf", "targets", `my-target.config.json`)
+        path.join(os.homedir(), ".cf", "targets", `my-target.config.json`),
       );
     });
   });
@@ -214,7 +214,7 @@ describe("Util unit tests", () => {
               },
             },
           },
-        })
+        }),
       ).be.equal("guid");
     });
 

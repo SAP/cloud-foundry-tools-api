@@ -83,7 +83,7 @@ describe("task unit tests", () => {
         .expects("writeFile")
         .withExactArgs(
           taskJsonFilePath,
-          stringify({ version: "1.2.3", tasks: [{ label: "test2" }, taskToSave] }, undefined, "  ")
+          stringify({ version: "1.2.3", tasks: [{ label: "test2" }, taskToSave] }, undefined, "  "),
         )
         .resolves();
       await saveTaskConfiguration("wsPath", taskToSave);

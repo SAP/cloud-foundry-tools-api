@@ -67,7 +67,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["bind-local", "-path", filePath, "-service-names", ...instanceNames, ...expectedTags],
           undefined,
-          undefined
+          undefined,
         )
         .resolves(cliResult);
       await cfLocal.cfBindLocalServices(filePath, instanceNames, tags);
@@ -117,7 +117,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["bind-local", "-path", filePath, "-service-names", ...instanceNames, ...expectedTags, ...expectedKeyNames],
           undefined,
-          undefined
+          undefined,
         )
         .resolves(cliResult);
       await cfLocal.cfBindLocalServices(filePath, instanceNames, tags, keyNames);
@@ -150,7 +150,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["bind-local", "-path", filePath, "-service-names", ...instanceNames, "-params", ...expectedParams],
           undefined,
-          undefined
+          undefined,
         )
         .resolves(cliResult);
       await cfLocal.cfBindLocalServices(filePath, instanceNames, [], [], params);
@@ -166,7 +166,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["bind-local", "-path", filePath, "-service-names", ...instanceNames, "-quote-vcap"],
           undefined,
-          undefined
+          undefined,
         )
         .resolves(cliResult);
       await cfLocal.cfBindLocalServices(filePath, instanceNames, [], [], [], true);
@@ -240,7 +240,7 @@ describe("cf-local unit tests", () => {
             "POST",
           ],
           undefined,
-          token
+          token,
         )
         .resolves(cliResult);
 
@@ -269,7 +269,7 @@ describe("cf-local unit tests", () => {
             "POST",
           ],
           undefined,
-          token
+          token,
         )
         .resolves(cliResult);
 
@@ -278,7 +278,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["curl", `/v3/service_instances?names=${instanceName}&space_guids=${spaceGuid}&type=managed&per_page=297`],
           undefined,
-          token
+          token,
         )
         .resolves({ exitCode: 0, stdout: JSON.stringify(output) });
       let progressReported = false;
@@ -311,7 +311,7 @@ describe("cf-local unit tests", () => {
             "POST",
           ],
           undefined,
-          token
+          token,
         )
         .resolves(cliResult);
 
@@ -320,7 +320,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["curl", `/v3/service_instances?names=${instanceName}&space_guids=${spaceGuid}&type=managed&per_page=297`],
           undefined,
-          token
+          token,
         )
         .resolves({ exitCode: 0, stdout: JSON.stringify(output) });
       let progressReported = false;
@@ -420,7 +420,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["curl", `/v3/service_instances?names=${instanceName}&space_guids=${spaceGuid}&type=managed&per_page=297`],
           undefined,
-          token
+          token,
         )
         .rejects(error);
 
@@ -461,11 +461,11 @@ describe("cf-local unit tests", () => {
           [
             "curl",
             `/v3/service_instances?names=${encodeURIComponent(
-              requestedName
+              requestedName,
             )}&space_guids=${spaceGuid}&type=managed&per_page=297`,
           ],
           undefined,
-          token
+          token,
         )
         .resolves(cliRetry);
       try {
@@ -501,7 +501,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["curl", `/v3/service_instances?space_guids=${spaceGuid}&type=managed&per_page=297`],
           undefined,
-          token
+          token,
         )
         .resolves(cliRetry);
       try {
@@ -547,7 +547,7 @@ describe("cf-local unit tests", () => {
             "POST",
           ],
           undefined,
-          localProgressHandler.cancelToken
+          localProgressHandler.cancelToken,
         )
         .resolves(cliResult);
       try {
@@ -585,7 +585,7 @@ describe("cf-local unit tests", () => {
             "POST",
           ],
           undefined,
-          progressHandler.cancelToken
+          progressHandler.cancelToken,
         )
         .resolves(cliResult);
 
@@ -622,7 +622,7 @@ describe("cf-local unit tests", () => {
             "POST",
           ],
           undefined,
-          progressHandler.cancelToken
+          progressHandler.cancelToken,
         )
         .resolves(cliResult);
       try {
@@ -664,7 +664,7 @@ describe("cf-local unit tests", () => {
             "POST",
           ],
           undefined,
-          progressHandler.cancelToken
+          progressHandler.cancelToken,
         )
         .resolves(cliResult);
       cliMock
@@ -672,7 +672,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["curl", `/v3/service_instances?names=${instanceName}&space_guids=${spaceGuid}&type=managed&per_page=297`],
           undefined,
-          token
+          token,
         )
         .resolves(cliRetry);
 
@@ -708,7 +708,7 @@ describe("cf-local unit tests", () => {
             "POST",
           ],
           undefined,
-          progressHandler.cancelToken
+          progressHandler.cancelToken,
         )
         .resolves(cliResult);
 
@@ -875,7 +875,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["curl", `/v3/service_plans?space_guids=${guid}&include=service_offering&per_page=${per_page}`],
           undefined,
-          undefined
+          undefined,
         )
         .resolves(cliResult);
       await cfLocal.cfGetServicePlansList({
@@ -1037,7 +1037,7 @@ describe("cf-local unit tests", () => {
         fail("test should fail");
       } catch (e) {
         expect(e.message).to.be.equal(
-          messages.not_allowed_filter(eFilters.service_broker_names, "service_credential_bindings")
+          messages.not_allowed_filter(eFilters.service_broker_names, "service_credential_bindings"),
         );
       }
     });
@@ -1055,7 +1055,7 @@ describe("cf-local unit tests", () => {
             `/v3/service_credential_bindings?names=${value}&service_instance_guids=${guid}&type=key&per_page=${CF_PAGE_SIZE}`,
           ],
           undefined,
-          undefined
+          undefined,
         )
         .resolves(cliResult);
       const answer = await cfLocal.cfGetServiceKeys({
@@ -1077,7 +1077,7 @@ describe("cf-local unit tests", () => {
         .withExactArgs(
           ["curl", `/v3/service_credential_bindings?type=key&per_page=${CF_PAGE_SIZE}`],
           undefined,
-          undefined
+          undefined,
         )
         .resolves(cliResult);
       try {

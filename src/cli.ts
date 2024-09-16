@@ -60,7 +60,7 @@ export class Cli {
     stdout: string,
     resolve: (value?: CliResult | PromiseLike<CliResult>) => void,
     stderr: string,
-    code: number
+    code: number,
   ) {
     if (stdout) {
       if (stdout.indexOf("error_code") > 0) {

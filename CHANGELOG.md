@@ -4,19 +4,17 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## [3.2.0](https://github.com/sap/cloud-foundry-tools-api/compare/v3.0.1...v3.2.0) (2023-02-15)
 
-
 ### Features
 
-* add quote-vcap flag to bind-local ([d3ccf84](https://github.com/sap/cloud-foundry-tools-api/commit/d3ccf8407329d682fd5628db272cd5cae1a32b41))
-
+- add quote-vcap flag to bind-local ([d3ccf84](https://github.com/sap/cloud-foundry-tools-api/commit/d3ccf8407329d682fd5628db272cd5cae1a32b41))
 
 ### Bug Fixes
 
-* added types instead of any ([#155](https://github.com/sap/cloud-foundry-tools-api/issues/155)) ([cc85b7a](https://github.com/sap/cloud-foundry-tools-api/commit/cc85b7ae7bf81cb9f26792b48d27aac5e9bb2645))
-* bump version ([c64970e](https://github.com/sap/cloud-foundry-tools-api/commit/c64970e4bb4083c7c22578bb0959e80719b9a973))
-* fix docs ([8ead838](https://github.com/sap/cloud-foundry-tools-api/commit/8ead8380719ab932d4f73bff1df9ea04d117551a))
-* fix tests ([e9a89c4](https://github.com/sap/cloud-foundry-tools-api/commit/e9a89c4cbb49caff501219baff8ceabab127c82e))
-* update docs ([a7189e5](https://github.com/sap/cloud-foundry-tools-api/commit/a7189e5979cc82ed79231b2f40ac187cb6721784))
+- added types instead of any ([#155](https://github.com/sap/cloud-foundry-tools-api/issues/155)) ([cc85b7a](https://github.com/sap/cloud-foundry-tools-api/commit/cc85b7ae7bf81cb9f26792b48d27aac5e9bb2645))
+- bump version ([c64970e](https://github.com/sap/cloud-foundry-tools-api/commit/c64970e4bb4083c7c22578bb0959e80719b9a973))
+- fix docs ([8ead838](https://github.com/sap/cloud-foundry-tools-api/commit/8ead8380719ab932d4f73bff1df9ea04d117551a))
+- fix tests ([e9a89c4](https://github.com/sap/cloud-foundry-tools-api/commit/e9a89c4cbb49caff501219baff8ceabab127c82e))
+- update docs ([a7189e5](https://github.com/sap/cloud-foundry-tools-api/commit/a7189e5979cc82ed79231b2f40ac187cb6721784))
 
 ## [2.2.0](https://github.com/sap/cloud-foundry-tools-api/compare/v2.0.4...v2.2.0) (2022-02-09)
 
