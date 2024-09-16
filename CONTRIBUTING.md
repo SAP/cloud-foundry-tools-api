@@ -39,3 +39,17 @@ This project uses [conventional commits standard](https://www.conventionalcommit
 Recommanded: Use `git cz` to build conventional commit messages.
 
 - requires [commitizen](https://github.com/commitizen/cz-cli#installing-the-command-line-tool) to be installed.
+
+## Release Process
+
+Performing a release requires push permissions to the repository.
+
+Ensure you are on the default branch and synced with origin.
+
+```shell
+   npm run release
+   git push --follow-tags origin main
+```
+
+Track the newly pushed tag (/^v[0-9]+(\.[0-9]+)\*/) build in the build system until successful completion.
+Inspect the newly artifacts published Github Releases / other relevant release targets.
