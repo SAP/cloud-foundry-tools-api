@@ -15,7 +15,7 @@ export async function getServicesInstancesFilteredByType(serviceTypes: string[])
     await cfGetServicePlansList({
       filters: [{ key: eFilters.service_offering_names, value: _.join(_.map(serviceTypes, encodeURIComponent)) }],
     }),
-    "guid"
+    "guid",
   );
   return _.size(guids)
     ? cfGetManagedServiceInstances({ filters: [{ key: eFilters.service_plan_guids, value: _.join(guids) }] })
@@ -34,11 +34,15 @@ export function createServiceInstance(
   serviceType: string,
   servicePlan: string,
   serviceInstanceName: string,
-  config?: any
+  config?: any,
+  nowait?: boolean,
 ): Promise<any> {
   let args = ["create-service", serviceType, servicePlan, serviceInstanceName];
   if (config) {
     args = args.concat(["-c", config]);
+  }
+  if (nowait !== true) {
+    args.push("--wait");
   }
   return Cli.execute(args);
 }

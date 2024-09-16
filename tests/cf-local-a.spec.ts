@@ -295,7 +295,7 @@ describe("cf-local-a unit tests", () => {
         fail("test should fail");
       } catch (error) {
         expect(error.message).to.be.equal(
-          messages.not_allowed_filter(eFilters.service_offering_guids, "organizations")
+          messages.not_allowed_filter(eFilters.service_offering_guids, "organizations"),
         );
       }
     });
@@ -437,7 +437,7 @@ describe("cf-local-a unit tests", () => {
       cliMock.expects("execute").withExactArgs(localTestArgs, undefined, undefined).resolves(cliResult);
       const services = await cfLocal.cfGetSpaceServices(
         { filters: [{ key: eFilters.names, value: serviceLabel }], per_page: CF_PAGE_SIZE },
-        spaceGUID
+        spaceGUID,
       );
       expect(services).to.have.lengthOf(1);
     });
@@ -446,12 +446,12 @@ describe("cf-local-a unit tests", () => {
       try {
         await cfLocal.cfGetSpaceServices(
           { filters: [{ key: eFilters.service_offering_guids, value: "value" }] },
-          "space-guid-test"
+          "space-guid-test",
         );
         fail("test should fail");
       } catch (error) {
         expect(error.message).to.be.equal(
-          messages.not_allowed_filter(eFilters.service_offering_guids, "service_offerings")
+          messages.not_allowed_filter(eFilters.service_offering_guids, "service_offerings"),
         );
       }
     });

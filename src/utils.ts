@@ -21,7 +21,7 @@ export async function dataContentAsObject(filePath: string) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return data;
       },
-      {}
+      {},
     );
   } catch (error) {
     // log error

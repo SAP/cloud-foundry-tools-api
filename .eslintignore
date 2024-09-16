@@ -5,5 +5,4 @@ out
 coverage
 test/resources
 *.d.ts
-.eslintrc.js
-nyc.config.js
+*.js
