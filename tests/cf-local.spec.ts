@@ -160,7 +160,7 @@ describe("cf-local unit tests", () => {
       cliResult.error = "";
       cliResult.stdout = "";
       cliResult.exitCode = 0;
-      
+
       cliMock
         .expects("execute")
         .withExactArgs(

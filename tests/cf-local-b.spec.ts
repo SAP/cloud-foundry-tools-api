@@ -347,7 +347,7 @@ describe("cf-local-b unit tests", () => {
             tags[0],
             "-tags",
             tags[1],
-            "-quote-vcap"
+            "-quote-vcap",
           ],
           undefined,
           undefined
@@ -955,7 +955,7 @@ describe("cf-local-b unit tests", () => {
         .resolves({ exitCode: 0, stdout: stringify(details) });
       cliMock
         .expects("execute")
-        .withExactArgs(["create-service-key", encodeURIComponent(instanceName), "key"])
+        .withExactArgs(["create-service-key", encodeURIComponent(instanceName), "key", "--wait"])
         .resolves();
       const params = await cfLocal.cfGetInstanceKeyParameters(instanceName);
       assert.deepEqual(params, details);

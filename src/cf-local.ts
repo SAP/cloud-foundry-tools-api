@@ -890,7 +890,7 @@ export async function cfGetInstanceKeyParameters(instanceName: string): Promise<
   const query = { filters: [{ key: eFilters.service_instance_guids, value: getGuid(instance) }] };
   let keys = await cfGetServiceKeys(query);
   if (!_.size(keys)) {
-    await Cli.execute(["create-service-key", encodeURIComponent(instanceName), "key"]);
+    await Cli.execute(["create-service-key", encodeURIComponent(instanceName), "key", "--wait"]);
     keys = await cfGetServiceKeys(padQuery(query, [{ key: eFilters.names, value: "key" }]));
   }
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return

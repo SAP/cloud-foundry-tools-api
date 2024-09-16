@@ -34,11 +34,15 @@ export function createServiceInstance(
   serviceType: string,
   servicePlan: string,
   serviceInstanceName: string,
-  config?: any
+  config?: any,
+  nowait?: boolean
 ): Promise<any> {
   let args = ["create-service", serviceType, servicePlan, serviceInstanceName];
   if (config) {
     args = args.concat(["-c", config]);
+  }
+  if (nowait !== true) {
+    args.push("--wait");
   }
   return Cli.execute(args);
 }
