@@ -26,8 +26,9 @@ export async function apiCreateServiceInstance(
   instanceName: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config?: any,
+  nowait?: boolean,
 ) {
-  return serviceUtils.createServiceInstance(serviceType, servicePlan, instanceName, config);
+  return serviceUtils.createServiceInstance(serviceType, servicePlan, instanceName, config, nowait);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
