@@ -79,7 +79,7 @@ describe("index package test", () => {
     const result = { data: {} };
     mockServiceUtils
       .expects("createServiceInstance")
-      .withExactArgs(serviceType, servicePlan, instanceName, config)
+      .withExactArgs(serviceType, servicePlan, instanceName, config, undefined)
       .resolves(result);
     assert.deepEqual(await index.apiCreateServiceInstance(serviceType, servicePlan, instanceName, config), result);
   });
