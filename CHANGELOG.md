@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.3.0](https://github.com/sap/cloud-foundry-tools-api/compare/v3.2.3...v3.3.0) (2026-02-04)
+
+
+### Features
+
+* update lodash dependency to 4.17.23 ([776151b](https://github.com/sap/cloud-foundry-tools-api/commit/776151b138c23788f2c995ba71550d16871be099))
+
+
+### Bug Fixes
+
+* lock file ([068e348](https://github.com/sap/cloud-foundry-tools-api/commit/068e3489cc0636da9760c09c01013feb8a579887))
+
 ### [3.2.3](https://github.com/sap/cloud-foundry-tools-api/compare/v3.2.2...v3.2.3) (2025-12-11)
 
 ### [3.2.2](https://github.com/sap/cloud-foundry-tools-api/compare/v3.2.0...v3.2.2) (2024-09-16)
