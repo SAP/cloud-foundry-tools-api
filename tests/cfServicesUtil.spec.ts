@@ -191,12 +191,20 @@ describe("services unit package tests", () => {
     const config = { data: "some" };
 
     it("ok", async () => {
-      mockCli.expects("execute").withExactArgs(["create-service", type, plan, instanceName, "-c", config]).resolves();
+      mockCli
+        .expects("execute")
+        .withExactArgs(["create-service", type, plan, instanceName, "-c", config, "--wait"])
+        .resolves();
       await createServiceInstance(type, plan, instanceName, config);
     });
 
+    it("ok, no '--wait'", async () => {
+      mockCli.expects("execute").withExactArgs(["create-service", type, plan, instanceName, "-c", config]).resolves();
+      await createServiceInstance(type, plan, instanceName, config, true);
+    });
+
     it("ok - without config", async () => {
-      mockCli.expects("execute").withExactArgs(["create-service", type, plan, instanceName]).resolves();
+      mockCli.expects("execute").withExactArgs(["create-service", type, plan, instanceName, "--wait"]).resolves();
       await createServiceInstance(type, plan, instanceName);
     });
   });

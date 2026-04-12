@@ -1,4 +1,4 @@
 module.exports = {
-  extends: ['@commitlint/config-conventional'],
-  ignores: [(message) => message.includes('chore: bump')],
-}
+  extends: ["@commitlint/config-conventional"],
+  ignores: [(message) => message.includes("chore: bump")],
+};
