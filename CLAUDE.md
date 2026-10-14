@@ -15,7 +15,7 @@ Single-package library (`src/`):
 - **`messages.ts`** — user-facing error/status messages.
 - **`task.ts`** — internal helper that saves VS Code task configuration to `.vscode/tasks.json`; it is not re-exported by `index.ts`.
 
-Compiled output goes to `out/src/` (`.js` + `.d.ts`). Published files: `out/src/*.js` and `out/src/*.ts`.
+Compiled output goes to `out/src/` (`.js` + `.d.ts`). Published files: `out/src/*.js` and `out/src/*.ts` (the `*.ts` glob covers both `.ts` source and `.d.ts` declaration files).
 
 API documentation is generated with TypeDoc and published to https://sap.github.io/cloud-foundry-tools-api.
 
@@ -42,7 +42,7 @@ Coverage is uploaded to Coveralls automatically in CI.
 
 GitHub Actions (`.github/workflows/`):
 
-- **`ci.yml`** — runs `npm run test` on Node 24 for pushes and PRs to `main*` branches; uploads coverage to Coveralls.
+- **`ci.yml`** — runs `npm run test` on Node 24 for pushes and PRs to `main*` branches; uploads coverage to Coveralls; then runs `npm pack` to verify the package tarball builds cleanly.
 - **`release.yml`** — triggered by `v*.*.*` tags; runs tests, packs the package (`npm pack`), creates a GitHub Release containing the tarball. The checked-in workflow does not publish to npm.
 - **`commitlint.yml`** — enforces conventional commit message format.
 
