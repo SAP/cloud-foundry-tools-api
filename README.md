@@ -1,3 +1,6 @@
+> [!WARNING]
+> **This repository has moved to [SAP/app-studio-toolkit/projects/cloud-foundry-tools-api](https://github.com/SAP/app-studio-toolkit/tree/main/projects/cloud-foundry-tools-api).**
+
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/SAP/cloud-foundry-tools-api)
 [![CircleCI](https://circleci.com/gh/SAP/cloud-foundry-tools-api.svg?style=svg)](https://circleci.com/gh/SAP/cloud-foundry-tools-api)
 [![Coverage Status](https://coveralls.io/repos/github/SAP/cloud-foundry-tools-api/badge.svg?branch=master)](https://coveralls.io/github/SAP/cloud-foundry-tools-api?branch=master)
